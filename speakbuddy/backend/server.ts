@@ -49,15 +49,12 @@ app.get(
     };
 
     return {
-      onOpen(_event: unknown, ws: { send: (data: string) => void }) {
+      onOpen(_event: unknown, ws: any) {
         console.log("[WS] Client connected");
         ws.send(JSON.stringify({ type: "ready", message: "Connected" }));
       },
 
-      async onMessage(
-        event: { data: unknown },
-        ws: { send: (data: unknown) => void }
-      ) {
+      async onMessage(event: any, ws: any) {
         try {
           // 二进制消息 = 音频数据块
           if (
@@ -90,7 +87,11 @@ app.get(
               console.log(
                 `[WS] Stop recording, ${state.audioChunks.length} chunks`
               );
-              if (state.audioChunks.length === 0) break;
+              if (state.audioChunks.length < 3) {
+                state.audioChunks = [];
+                ws.send(JSON.stringify({ type: "ai_text", text: "I didn't hear anything. Please hold the button and speak." }));
+                break;
+              }
 
               // 合并所有音频块
               const webmBuffer = Buffer.concat(state.audioChunks);
@@ -171,6 +172,8 @@ app.get(
 );
 
 // WebM → WAV 转换（使用 ffmpeg）
+const FFMPEG_PATH = "F:\\anaconda\\envs\\patchcore\\Library\\bin\\ffmpeg.exe";
+
 async function convertWebmToWav(webmBuffer: Buffer): Promise<Buffer> {
   const id = randomUUID();
   const inputPath = join(tmpdir(), `${id}.webm`);
@@ -180,7 +183,7 @@ async function convertWebmToWav(webmBuffer: Buffer): Promise<Buffer> {
     await writeFile(inputPath, webmBuffer);
     await new Promise<void>((resolve, reject) => {
       execFile(
-        "ffmpeg",
+        FFMPEG_PATH,
         [
           "-i",
           inputPath,
@@ -206,12 +209,12 @@ async function convertWebmToWav(webmBuffer: Buffer): Promise<Buffer> {
 
 // ASR 语音识别（MiMo-V2.5-ASR）
 async function transcribeAudio(wavBuffer: Buffer): Promise<string> {
-  const base64Audio = wavBuffer.toString("base64");
+  const base64Audio = `data:audio/wav;base64,${wavBuffer.toString("base64")}`;
 
   const resp = await fetch(`${MIMO_BASE_URL}/chat/completions`, {
     method: "POST",
     headers: {
-      "api-key": MIMO_API_KEY,
+      "Authorization": `Bearer ${MIMO_API_KEY}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
@@ -254,7 +257,7 @@ async function generateAIReply(
   const resp = await fetch(`${MIMO_BASE_URL}/chat/completions`, {
     method: "POST",
     headers: {
-      "api-key": MIMO_API_KEY,
+      "Authorization": `Bearer ${MIMO_API_KEY}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
@@ -282,7 +285,7 @@ async function generateTTS(text: string): Promise<Buffer> {
   const resp = await fetch(`${MIMO_BASE_URL}/chat/completions`, {
     method: "POST",
     headers: {
-      "api-key": MIMO_API_KEY,
+      "Authorization": `Bearer ${MIMO_API_KEY}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
@@ -310,7 +313,7 @@ async function generateTTS(text: string): Promise<Buffer> {
 }
 
 // 健康检查
-app.get("/", (c: { json: (data: object) => Response }) => {
+app.get("/", (c: any) => {
   return c.json({ status: "ok", message: "SpeakBuddy Backend Running" });
 });
 
