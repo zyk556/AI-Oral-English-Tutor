@@ -13,7 +13,7 @@ config();
 
 const MIMO_API_KEY = process.env.MIMO_API_KEY!;
 const MIMO_BASE_URL = "https://api.xiaomimimo.com/v1";
-const MIMO_LLM_MODEL = "mimo-v2.5-flash";
+const MIMO_LLM_MODEL = "mimo-v2-flash";
 const MIMO_ASR_MODEL = "mimo-v2.5-asr";
 const MIMO_TTS_MODEL = "mimo-v2.5-tts";
 const MIMO_TTS_VOICE = "Chloe"; // 英文女声
