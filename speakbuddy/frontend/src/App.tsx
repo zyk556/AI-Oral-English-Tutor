@@ -8,7 +8,7 @@ import { FaComments } from "react-icons/fa";
 
 export default function App() {
   const { scenario, messages, connected } = useStore();
-  const { sendAudio, setScenario } = useWebSocket();
+  const { sendAudio, stopRecording, setScenario } = useWebSocket();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [playingId, setPlayingId] = useState<string | null>(null);
@@ -20,7 +20,6 @@ export default function App() {
 
   // 播放/停止音频
   const handlePlayAudio = (messageId: string, audioUrl: string) => {
-    // 如果正在播放同一个音频，停止它
     if (audioRef.current && playingId === messageId) {
       audioRef.current.pause();
       audioRef.current = null;
@@ -28,12 +27,10 @@ export default function App() {
       return;
     }
 
-    // 停止当前播放
     if (audioRef.current) {
       audioRef.current.pause();
     }
 
-    // 播放新音频
     const audio = new Audio(audioUrl);
     audioRef.current = audio;
     setPlayingId(messageId);
@@ -93,7 +90,9 @@ export default function App() {
           )}
           {scenario && messages.length === 0 && (
             <div className="flex flex-col items-center justify-center h-full text-gray-400">
-              <p className="text-sm">Hold the microphone button and start speaking!</p>
+              <p className="text-sm">
+                Hold the microphone button and start speaking!
+              </p>
             </div>
           )}
           {messages.map((msg) => (
@@ -111,6 +110,7 @@ export default function App() {
         <div className="flex justify-center py-2">
           <RecordButton
             onAudioData={sendAudio}
+            onStopRecording={stopRecording}
             disabled={!scenario || !connected}
           />
         </div>
