@@ -3,11 +3,13 @@ import { FaMicrophone, FaStop } from "react-icons/fa";
 
 interface RecordButtonProps {
   onAudioData: (data: ArrayBuffer) => void;
+  onStopRecording: () => void;
   disabled: boolean;
 }
 
 export default function RecordButton({
   onAudioData,
+  onStopRecording,
   disabled,
 }: RecordButtonProps) {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -35,7 +37,7 @@ export default function RecordButton({
         }
       };
 
-      mediaRecorder.start(200); // 200ms timeslice
+      mediaRecorder.start(200);
       setRecording(true);
       console.log("[Record] Started recording");
     } catch (err) {
@@ -50,14 +52,15 @@ export default function RecordButton({
       mediaRecorder.stop();
       console.log("[Record] Stopped recording");
     }
-    // 释放麦克风
     const stream = streamRef.current;
     if (stream) {
       stream.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     }
     setRecording(false);
-  }, []);
+    // 通知后端录音结束
+    onStopRecording();
+  }, [onStopRecording]);
 
   return (
     <div className="flex flex-col items-center gap-2">

@@ -3,8 +3,6 @@ import { useStore } from "../store";
 
 export function useWebSocket() {
   const wsRef = useRef<WebSocket | null>(null);
-  const pendingAudioChunks = useRef<ArrayBuffer[]>([]);
-  const lastAIId = useRef<string | null>(null);
 
   const {
     setConnected,
@@ -35,16 +33,15 @@ export function useWebSocket() {
     };
 
     ws.onmessage = (event) => {
-      // 二进制消息 = AI 语音音频 (mp3)
+      // 二进制消息 = AI 语音音频 (wav)
       if (event.data instanceof Blob) {
         event.data.arrayBuffer().then((buffer) => {
-          const blob = new Blob([buffer], { type: "audio/mpeg" });
+          const blob = new Blob([buffer], { type: "audio/wav" });
           const audioUrl = URL.createObjectURL(blob);
           // 为最后一条 AI 消息附加音频 URL
           const state = useStore.getState();
           const lastMsg = state.messages[state.messages.length - 1];
           if (lastMsg && lastMsg.role === "ai" && !lastMsg.audioUrl) {
-            // 直接更新 store 中最后一条消息的 audioUrl
             useStore.setState((s) => ({
               messages: s.messages.map((m) =>
                 m.id === lastMsg.id ? { ...m, audioUrl } : m
@@ -87,11 +84,19 @@ export function useWebSocket() {
     };
   }, [setConnected, addUserMessage, addAIMessage, setStoreScenario]);
 
-  // 发送音频数据
+  // 发送音频数据块
   const sendAudio = useCallback((data: ArrayBuffer) => {
     const ws = wsRef.current;
     if (ws && ws.readyState === WebSocket.OPEN) {
       ws.send(data);
+    }
+  }, []);
+
+  // 通知后端录音结束
+  const stopRecording = useCallback(() => {
+    const ws = wsRef.current;
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: "stop_recording" }));
     }
   }, []);
 
@@ -101,9 +106,8 @@ export function useWebSocket() {
     if (ws && ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify({ type: "set_scenario", scenario }));
     }
-    // 清空消息列表
     useStore.getState().clearMessages();
   }, []);
 
-  return { sendAudio, setScenario };
+  return { sendAudio, stopRecording, setScenario };
 }
