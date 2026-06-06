@@ -64,6 +64,8 @@ export default function ChatBubble({
               </button>
             </div>
           )}
+          {/* 纠错卡片（纯听模式下仍然显示） */}
+          {message.evaluation && <CorrectionCard evaluation={message.evaluation} />}
         </div>
       </div>
     );
