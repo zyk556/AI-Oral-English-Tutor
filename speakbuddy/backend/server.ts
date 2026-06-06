@@ -69,7 +69,8 @@ Rules:
 // 会话状态
 interface SessionState {
   scenario: string | null;
-  history: Array<{ role: "user" | "assistant"; content: string }>;
+  // 每个场景独立的对话历史
+  histories: Record<string, Array<{ role: "user" | "assistant"; content: string }>>;
 }
 
 const app = new Hono();
@@ -81,7 +82,14 @@ app.get(
   upgradeWebSocket(() => {
     const state: SessionState = {
       scenario: null,
-      history: [],
+      histories: {},
+    };
+
+    // 获取当前场景的历史
+    const getHistory = () => {
+      if (!state.scenario) return [];
+      if (!state.histories[state.scenario]) state.histories[state.scenario] = [];
+      return state.histories[state.scenario];
     };
 
     return {
@@ -98,7 +106,7 @@ app.get(
             case "set_scenario":
               console.log(`[WS] Setting scenario: ${msg.scenario}`);
               state.scenario = msg.scenario;
-              state.history = [];
+              // 不清空历史，每个场景独立保留
               ws.send(
                 JSON.stringify({ type: "scenario_set", scenario: msg.scenario })
               );
@@ -109,17 +117,18 @@ app.get(
               if (!state.scenario) break;
 
               ws.send(JSON.stringify({ type: "user_text", text: msg.text }));
-              state.history.push({ role: "user", content: msg.text });
+              const history = getHistory();
+              history.push({ role: "user", content: msg.text });
 
               try {
                 // 双角色 LLM：一次调用，返回对话回复 + 评估
                 const { reply, evaluation } = await generateReplyAndEvaluation(
                   state.scenario,
-                  state.history
+                  history
                 );
 
                 // 对话历史只存 reply
-                state.history.push({ role: "assistant", content: reply });
+                history.push({ role: "assistant", content: reply });
 
                 // 发送对话文本
                 ws.send(JSON.stringify({ type: "ai_text", text: reply }));

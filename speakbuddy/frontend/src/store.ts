@@ -24,11 +24,13 @@ interface AppState {
   scenario: string | null;
   setScenario: (scenario: string) => void;
 
+  // 每个场景独立的消息历史
+  chatHistories: Record<string, Message[]>;
+  // 当前场景的消息（派生）
   messages: Message[];
   addUserMessage: (text: string) => void;
   addAIMessage: (text: string, audioUrl?: string) => void;
   addEvaluation: (messageId: string, evaluation: Evaluation) => void;
-  clearMessages: () => void;
 
   connected: boolean;
   setConnected: (connected: boolean) => void;
@@ -36,43 +38,72 @@ interface AppState {
 
 let messageCounter = 0;
 
-export const useStore = create<AppState>((set) => ({
+export const useStore = create<AppState>((set, get) => ({
   scenario: null,
-  setScenario: (scenario) => set({ scenario }),
+  setScenario: (scenario) => {
+    const histories = get().chatHistories;
+    // 切换场景时，加载该场景的历史（新场景则为空数组）
+    const msgs = histories[scenario] || [];
+    set({
+      scenario,
+      messages: msgs,
+      chatHistories: histories[scenario]
+        ? histories
+        : { ...histories, [scenario]: [] },
+    });
+  },
 
+  chatHistories: {},
   messages: [],
+
   addUserMessage: (text) =>
-    set((state) => ({
-      messages: [
-        ...state.messages,
-        {
-          id: `msg-${++messageCounter}`,
-          role: "user",
-          text,
-          timestamp: Date.now(),
-        },
-      ],
-    })),
+    set((state) => {
+      const key = state.scenario;
+      if (!key) return state;
+      const msg: Message = {
+        id: `msg-${++messageCounter}`,
+        role: "user",
+        text,
+        timestamp: Date.now(),
+      };
+      const updated = [...(state.chatHistories[key] || []), msg];
+      return {
+        chatHistories: { ...state.chatHistories, [key]: updated },
+        messages: updated,
+      };
+    }),
+
   addAIMessage: (text, audioUrl) =>
-    set((state) => ({
-      messages: [
-        ...state.messages,
-        {
-          id: `msg-${++messageCounter}`,
-          role: "ai",
-          text,
-          audioUrl,
-          timestamp: Date.now(),
-        },
-      ],
-    })),
+    set((state) => {
+      const key = state.scenario;
+      if (!key) return state;
+      const msg: Message = {
+        id: `msg-${++messageCounter}`,
+        role: "ai",
+        text,
+        audioUrl,
+        timestamp: Date.now(),
+      };
+      const updated = [...(state.chatHistories[key] || []), msg];
+      return {
+        chatHistories: { ...state.chatHistories, [key]: updated },
+        messages: updated,
+      };
+    }),
+
   addEvaluation: (messageId, evaluation) =>
-    set((state) => ({
-      messages: state.messages.map((m) =>
+    set((state) => {
+      const key = state.scenario;
+      if (!key) return state;
+      const history = state.chatHistories[key] || [];
+      const updated = history.map((m) =>
         m.id === messageId ? { ...m, evaluation } : m
-      ),
-    })),
-  clearMessages: () => set({ messages: [] }),
+      );
+      return {
+        chatHistories: { ...state.chatHistories, [key]: updated },
+        messages: updated,
+      };
+    }),
 
   connected: false,
   setConnected: (connected) => set({ connected }),
