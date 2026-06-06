@@ -1,47 +1,45 @@
 import { create } from "zustand";
 
+// 评估数据类型
+export interface Evaluation {
+  corrected: string;
+  grammar: Array<{ original: string; corrected: string; explanation: string }>;
+  vocabulary: Array<{ suggestion: string; context: string }>;
+  score: { fluency: number; grammar: number; vocabulary: number; overall: number };
+  comment: string;
+}
+
 // 消息类型
 export interface Message {
   id: string;
   role: "user" | "ai";
   text: string;
   audioUrl?: string;
+  evaluation?: Evaluation;
   timestamp: number;
 }
 
 // 全局状态
 interface AppState {
-  // 场景
   scenario: string | null;
   setScenario: (scenario: string) => void;
 
-  // 消息列表
   messages: Message[];
   addUserMessage: (text: string) => void;
   addAIMessage: (text: string, audioUrl?: string) => void;
+  addEvaluation: (messageId: string, evaluation: Evaluation) => void;
   clearMessages: () => void;
 
-  // 连接状态
   connected: boolean;
   setConnected: (connected: boolean) => void;
-
-  // 录音状态
-  recording: boolean;
-  setRecording: (recording: boolean) => void;
-
-  // 播放中的消息 ID
-  playingAudioId: string | null;
-  setPlayingAudioId: (id: string | null) => void;
 }
 
 let messageCounter = 0;
 
 export const useStore = create<AppState>((set) => ({
-  // 场景
   scenario: null,
   setScenario: (scenario) => set({ scenario }),
 
-  // 消息列表
   messages: [],
   addUserMessage: (text) =>
     set((state) => ({
@@ -68,17 +66,14 @@ export const useStore = create<AppState>((set) => ({
         },
       ],
     })),
+  addEvaluation: (messageId, evaluation) =>
+    set((state) => ({
+      messages: state.messages.map((m) =>
+        m.id === messageId ? { ...m, evaluation } : m
+      ),
+    })),
   clearMessages: () => set({ messages: [] }),
 
-  // 连接状态
   connected: false,
   setConnected: (connected) => set({ connected }),
-
-  // 录音状态
-  recording: false,
-  setRecording: (recording) => set({ recording }),
-
-  // 播放中的消息 ID
-  playingAudioId: null,
-  setPlayingAudioId: (id) => set({ playingAudioId: id }),
 }));
