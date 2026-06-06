@@ -2,6 +2,9 @@ import { Hono } from "hono";
 import { serve } from "@hono/node-server";
 import { createNodeWebSocket } from "@hono/node-ws";
 import { config } from "dotenv";
+import { readFile } from "fs/promises";
+import { join } from "path";
+import { existsSync } from "fs";
 
 // 加载环境变量（从 .env 文件读取 MIMO_API_KEY）
 config();
@@ -264,9 +267,46 @@ async function generateTTS(text: string): Promise<Buffer> {
   return Buffer.from(audioBase64, "base64");
 }
 
-// 健康检查
-app.get("/", (c: any) => {
-  return c.json({ status: "ok", message: "SpeakBuddy Backend Running" });
+// 静态文件服务（前端打包产物）
+const PUBLIC_DIR = join(import.meta.dirname, "public");
+
+const MIME_TYPES: Record<string, string> = {
+  ".html": "text/html",
+  ".js": "application/javascript",
+  ".css": "text/css",
+  ".json": "application/json",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".svg": "image/svg+xml",
+  ".ico": "image/x-icon",
+  ".woff": "font/woff",
+  ".woff2": "font/woff2",
+};
+
+// 所有非 /ws 路由都返回静态文件或 index.html（SPA）
+app.get("*", async (c: any) => {
+  const path = c.req.path === "/" ? "/index.html" : c.req.path;
+  const filePath = join(PUBLIC_DIR, path);
+
+  if (existsSync(filePath)) {
+    const ext = filePath.substring(filePath.lastIndexOf("."));
+    const mime = MIME_TYPES[ext] || "application/octet-stream";
+    const content = await readFile(filePath);
+    return new Response(content, {
+      headers: { "Content-Type": mime },
+    });
+  }
+
+  // SPA 回退
+  const indexPath = join(PUBLIC_DIR, "index.html");
+  if (existsSync(indexPath)) {
+    const content = await readFile(indexPath);
+    return new Response(content, {
+      headers: { "Content-Type": "text/html" },
+    });
+  }
+
+  return c.text("Not Found", 404);
 });
 
 // 启动服务器
