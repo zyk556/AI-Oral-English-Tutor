@@ -1,6 +1,7 @@
 interface ScenarioSelectorProps {
   onSelect: (scenario: string) => void;
   currentScenario: string | null;
+  currentContext?: string;
 }
 
 const scenarios = [
@@ -27,6 +28,7 @@ const scenarios = [
 export default function ScenarioSelector({
   onSelect,
   currentScenario,
+  currentContext,
 }: ScenarioSelectorProps) {
   return (
     <aside className="w-[280px] flex-shrink-0 py-4 pl-4 space-y-3 hidden md:block">
@@ -68,9 +70,14 @@ export default function ScenarioSelector({
               >
                 {s.label}
               </div>
-              <div className="text-[11px]" style={{ color: "var(--color-text-secondary)" }}>
-                {s.subtitle}
+              <div className="text-[11px] leading-relaxed" style={{ color: "var(--color-text-secondary)" }}>
+                {isActive && currentContext ? currentContext : s.subtitle}
               </div>
+              {isActive && currentContext && (
+                <div className="text-[9px] mt-0.5 italic" style={{ color: "rgba(110,110,115,0.4)" }}>
+                  For reference only
+                </div>
+              )}
             </div>
           </button>
         );

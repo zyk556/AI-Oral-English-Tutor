@@ -5,11 +5,11 @@ import { useSpeechRecognition } from "./hooks/useSpeechRecognition";
 import ScenarioSelector from "./components/ScenarioSelector";
 import ChatBubble from "./components/ChatBubble";
 import VoiceSettings from "./components/VoiceSettings";
-import { FaHeadphones, FaComment, FaMicrophone, FaSpinner, FaGlobe } from "react-icons/fa";
+import { FaHeadphones, FaComment, FaMicrophone, FaSpinner, FaGlobe, FaRedo } from "react-icons/fa";
 
 export default function App() {
   const {
-    scenario, messages, connected, playingId, pausedId,
+    scenario, scenarioContext, refreshContext, messages, connected, playingId, pausedId,
     setPlayingId, setPausedId, listenMode, setListenMode,
     voiceSettings, setVoiceSettings,
   } = useStore();
@@ -153,29 +153,38 @@ export default function App() {
       {/* ===== 三栏主体 ===== */}
       <div className="flex-1 flex max-w-[1600px] mx-auto w-full">
         {/* 左侧场景栏 */}
-        <ScenarioSelector onSelect={setScenario} currentScenario={scenario} />
+        <ScenarioSelector onSelect={setScenario} currentScenario={scenario} currentContext={scenarioContext} />
 
         {/* 中央聊天区 */}
         <main className="flex-1 flex flex-col min-w-0 px-4 py-4">
           {/* 场景提示卡 */}
           {scenario && (
             <div
-              className="mb-4 p-4 rounded-3xl"
+              className="mb-4 p-4 rounded-3xl flex items-start justify-between gap-3"
               style={{
                 background: "linear-gradient(135deg, rgba(91,108,255,0.06), rgba(123,97,255,0.06))",
                 border: "1px solid rgba(91,108,255,0.08)",
               }}
             >
-              <div className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
-                {scenario === "interview" ? "Interview Scenario" : scenario === "ordering" ? "Restaurant Scenario" : "Meeting Scenario"}
+              <div className="flex-1">
+                <div className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
+                  {scenario === "interview" ? "💼 Interview" : scenario === "ordering" ? "🍽️ Restaurant" : "👥 Meeting"}
+                </div>
+                <div className="text-xs mt-1.5 leading-relaxed" style={{ color: "var(--color-text-secondary)" }}>
+                  {scenarioContext}
+                </div>
+                <div className="text-[10px] mt-1 italic" style={{ color: "rgba(110,110,115,0.5)" }}>
+                  For reference only — speak freely
+                </div>
               </div>
-              <div className="text-xs mt-1" style={{ color: "var(--color-text-secondary)" }}>
-                {scenario === "interview"
-                  ? "You are an experienced interviewer. Ask professional questions naturally."
-                  : scenario === "ordering"
-                  ? "You are a friendly waiter. Take orders and suggest dishes."
-                  : "You are a project manager. Lead the daily standup meeting."}
-              </div>
+              <button
+                onClick={refreshContext}
+                className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center transition-all duration-200"
+                style={{ background: "rgba(91,108,255,0.08)", color: "var(--color-primary)" }}
+                title="Randomize scenario"
+              >
+                <FaRedo size={11} />
+              </button>
             </div>
           )}
 
