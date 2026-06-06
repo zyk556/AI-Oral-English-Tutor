@@ -1,20 +1,27 @@
 import React from "react";
-import { FaPlay, FaPause, FaRobot, FaUser } from "react-icons/fa";
+import { FaRedo, FaPause, FaPlay, FaRobot, FaUser } from "react-icons/fa";
 import type { Message } from "../store";
 import CorrectionCard from "./CorrectionCard";
 
 interface ChatBubbleProps {
   message: Message;
   isPlaying: boolean;
-  onPlayAudio: (messageId: string, audioUrl: string) => void;
+  isPaused: boolean;
+  onPause: () => void;
+  onResume: () => void;
+  onReplay: () => void;
 }
 
 export default function ChatBubble({
   message,
   isPlaying,
-  onPlayAudio,
+  isPaused,
+  onPause,
+  onResume,
+  onReplay,
 }: ChatBubbleProps) {
   const isUser = message.role === "user";
+  const hasAudio = !isUser && message.audioUrl;
 
   return (
     <div
@@ -43,30 +50,37 @@ export default function ChatBubble({
         >
           <p>{message.text}</p>
 
-          {/* 播放按钮 */}
-          {!isUser && message.audioUrl && (
-            <button
-              onClick={() => onPlayAudio(message.id, message.audioUrl!)}
-              className={`mt-2 flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                isPlaying
-                  ? "bg-red-100 text-red-600 hover:bg-red-200"
-                  : "bg-gray-300 text-gray-700 hover:bg-gray-400"
-              }`}
-            >
+          {/* 两个按钮：暂停/继续 + 重播 */}
+          {hasAudio && (
+            <div className="mt-2 flex items-center gap-2">
+              {/* 暂停 / 继续 */}
               {isPlaying ? (
-                <>
-                  <FaPause size={10} /> Stop
-                </>
+                <button
+                  onClick={onPause}
+                  className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-600 hover:bg-red-200 transition-colors"
+                >
+                  <FaPause size={10} /> Pause
+                </button>
               ) : (
-                <>
+                <button
+                  onClick={onResume}
+                  className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-600 hover:bg-blue-200 transition-colors"
+                >
                   <FaPlay size={10} /> Play
-                </>
+                </button>
               )}
-            </button>
+              {/* 重播 */}
+              <button
+                onClick={onReplay}
+                className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-600 hover:bg-green-200 transition-colors"
+              >
+                <FaRedo size={10} /> Replay
+              </button>
+            </div>
           )}
         </div>
 
-        {/* 纠错卡片（仅 AI 消息，折叠展示） */}
+        {/* 纠错卡片 */}
         {!isUser && message.evaluation && (
           <CorrectionCard evaluation={message.evaluation} />
         )}
