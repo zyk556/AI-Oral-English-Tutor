@@ -3,7 +3,7 @@ import { serve } from "@hono/node-server";
 import { createNodeWebSocket } from "@hono/node-ws";
 import { config } from "dotenv";
 
-// 加载环境变量
+// 加载环境变量（从 .env 文件读取 MIMO_API_KEY）
 config();
 
 const MIMO_API_KEY = process.env.MIMO_API_KEY!;
