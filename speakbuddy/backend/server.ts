@@ -43,6 +43,7 @@ You have TWO roles:
 You MUST respond with ONLY a valid JSON object (no markdown, no code fences) in this exact format:
 {
   "reply": "Your conversational response here (2-3 sentences)",
+  "translation": "简体中文翻译，翻译你的 reply 内容，自然口语化",
   "evaluation": {
     "corrected": "A grammatically corrected version of the user's full message",
     "grammar": [
@@ -122,16 +123,18 @@ app.get(
 
               try {
                 // 双角色 LLM：一次调用，返回对话回复 + 评估
-                const { reply, evaluation } = await generateReplyAndEvaluation(
+                const result = await generateReplyAndEvaluation(
                   state.scenario,
                   history
                 );
+                const { reply, evaluation } = result;
+                const translation = result.translation;
 
                 // 对话历史只存 reply
                 history.push({ role: "assistant", content: reply });
 
-                // 发送对话文本
-                ws.send(JSON.stringify({ type: "ai_text", text: reply }));
+                // 发送对话文本（含翻译）
+                ws.send(JSON.stringify({ type: "ai_text", text: reply, translation }));
 
                 // 发送评估数据
                 ws.send(
@@ -169,7 +172,7 @@ app.get(
 async function generateReplyAndEvaluation(
   scenario: string,
   history: Array<{ role: "user" | "assistant"; content: string }>
-): Promise<{ reply: string; evaluation: Evaluation }> {
+): Promise<{ reply: string; translation: string; evaluation: Evaluation }> {
   const systemPrompt = buildSystemPrompt(scenario);
 
   const resp = await fetch(`${MIMO_BASE_URL}/chat/completions`, {
@@ -204,6 +207,7 @@ async function generateReplyAndEvaluation(
     const parsed = JSON.parse(jsonStr);
 
     const reply = parsed.reply || "I didn't catch that, could you repeat?";
+    const translation = parsed.translation || "";
     const evaluation: Evaluation = {
       corrected: parsed.evaluation?.corrected || "",
       grammar: parsed.evaluation?.grammar || [],
@@ -212,12 +216,13 @@ async function generateReplyAndEvaluation(
       comment: parsed.evaluation?.comment || "",
     };
 
-    return { reply, evaluation };
+    return { reply, translation, evaluation };
   } catch (parseErr) {
     console.error("[LLM] Failed to parse JSON response:", content);
     // 降级：把整个内容当作 reply，评估为空
     return {
       reply: content || "I didn't catch that, could you repeat?",
+      translation: "",
       evaluation: {
         corrected: "",
         grammar: [],

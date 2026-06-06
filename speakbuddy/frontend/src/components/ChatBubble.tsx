@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { FaRedo, FaPause, FaPlay, FaRobot, FaUser, FaEye } from "react-icons/fa";
+import { FaRedo, FaPause, FaPlay, FaRobot, FaUser, FaEye, FaLanguage } from "react-icons/fa";
 import type { Message } from "../store";
 import CorrectionCard from "./CorrectionCard";
 
@@ -24,7 +24,9 @@ export default function ChatBubble({
 }: ChatBubbleProps) {
   const isUser = message.role === "user";
   const hasAudio = !isUser && message.audioUrl;
+  const hasTranslation = !isUser && !!message.translation;
   const [showSubtitle, setShowSubtitle] = useState(false);
+  const [showTranslation, setShowTranslation] = useState(false);
 
   // 纯听模式下 AI 消息隐藏文字，显示动画点
   if (!isUser && listenMode && !showSubtitle) {
@@ -34,20 +36,17 @@ export default function ChatBubble({
           <FaRobot size={14} />
         </div>
         <div className="max-w-[75%] flex flex-col">
-          {/* 动画三点指示器 */}
           <div className="px-4 py-3 rounded-2xl rounded-tl-md bg-gray-200 flex items-center gap-1.5">
             <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
             <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
             <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
           </div>
-          {/* 轻点查看字幕 */}
           <button
             onClick={() => setShowSubtitle(true)}
             className="mt-1 ml-2 flex items-center gap-1 text-[10px] text-gray-400 hover:text-gray-600 transition-colors"
           >
             <FaEye size={10} /> Tap to view subtitles
           </button>
-          {/* 音频控制按钮 */}
           {hasAudio && (
             <div className="mt-2 ml-2 flex items-center gap-2">
               {isPlaying ? (
@@ -64,7 +63,22 @@ export default function ChatBubble({
               </button>
             </div>
           )}
-          {/* 纠错卡片（纯听模式下仍然显示） */}
+          {/* 翻译按钮 + 翻译卡片 */}
+          {hasTranslation && (
+            <div className="mt-2 ml-2">
+              <button
+                onClick={() => setShowTranslation(!showTranslation)}
+                className="flex items-center gap-1 text-[10px] text-purple-400 hover:text-purple-600 transition-colors"
+              >
+                <FaLanguage size={12} /> {showTranslation ? "Hide Translation" : "Show Translation"}
+              </button>
+              {showTranslation && (
+                <div className="mt-1 px-3 py-2 bg-purple-50 rounded-lg text-xs text-gray-700 border border-purple-100">
+                  {message.translation}
+                </div>
+              )}
+            </div>
+          )}
           {message.evaluation && <CorrectionCard evaluation={message.evaluation} />}
         </div>
       </div>
@@ -77,7 +91,6 @@ export default function ChatBubble({
         isUser ? "flex-row-reverse" : "flex-row"
       }`}
     >
-      {/* 头像 */}
       <div
         className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-white text-xs ${
           isUser ? "bg-blue-500" : "bg-gray-500"
@@ -86,9 +99,7 @@ export default function ChatBubble({
         {isUser ? <FaUser size={14} /> : <FaRobot size={14} />}
       </div>
 
-      {/* 消息区域 */}
       <div className={`max-w-[75%] ${isUser ? "items-end" : "items-start"} flex flex-col`}>
-        {/* 气泡 */}
         <div
           className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
             isUser
@@ -98,7 +109,6 @@ export default function ChatBubble({
         >
           <p>{message.text}</p>
 
-          {/* 两个按钮 */}
           {hasAudio && (
             <div className="mt-2 flex items-center gap-2">
               {isPlaying ? (
@@ -117,7 +127,23 @@ export default function ChatBubble({
           )}
         </div>
 
-        {/* 纠错卡片 */}
+        {/* 翻译按钮 + 翻译卡片 */}
+        {!isUser && hasTranslation && (
+          <div className="mt-1 ml-2">
+            <button
+              onClick={() => setShowTranslation(!showTranslation)}
+              className="flex items-center gap-1 text-[10px] text-purple-400 hover:text-purple-600 transition-colors"
+            >
+              <FaLanguage size={12} /> {showTranslation ? "Hide Translation" : "Show Translation"}
+            </button>
+            {showTranslation && (
+              <div className="mt-1 px-3 py-2 bg-purple-50 rounded-lg text-xs text-gray-700 border border-purple-100">
+                {message.translation}
+              </div>
+            )}
+          </div>
+        )}
+
         {!isUser && message.evaluation && (
           <CorrectionCard evaluation={message.evaluation} />
         )}

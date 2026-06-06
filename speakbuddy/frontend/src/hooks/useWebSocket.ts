@@ -72,7 +72,7 @@ export function useWebSocket() {
             addUserMessage(msg.text);
             break;
           case "ai_text":
-            addAIMessage(msg.text);
+            addAIMessage(msg.text, msg.translation);
             break;
           case "ai_evaluation":
             // 将评估数据附加到最后一条 AI 消息

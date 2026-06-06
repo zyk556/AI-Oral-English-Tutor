@@ -15,6 +15,7 @@ export interface Message {
   role: "user" | "ai";
   text: string;
   audioUrl?: string;
+  translation?: string;
   evaluation?: Evaluation;
   timestamp: number;
 }
@@ -29,7 +30,7 @@ interface AppState {
   // 当前场景的消息（派生）
   messages: Message[];
   addUserMessage: (text: string) => void;
-  addAIMessage: (text: string, audioUrl?: string) => void;
+  addAIMessage: (text: string, translation?: string) => void;
   addEvaluation: (messageId: string, evaluation: Evaluation) => void;
 
   // 音频播放状态
@@ -79,7 +80,7 @@ export const useStore = create<AppState>((set, get) => ({
       };
     }),
 
-  addAIMessage: (text, audioUrl) =>
+  addAIMessage: (text, translation) =>
     set((state) => {
       const key = state.scenario;
       if (!key) return state;
@@ -87,7 +88,7 @@ export const useStore = create<AppState>((set, get) => ({
         id: `msg-${++messageCounter}`,
         role: "ai",
         text,
-        audioUrl,
+        translation,
         timestamp: Date.now(),
       };
       const updated = [...(state.chatHistories[key] || []), msg];
