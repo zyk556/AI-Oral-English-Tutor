@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { createPortal } from "react-dom";
-import { FaCog, FaTimes, FaPlay, FaSpinner } from "react-icons/fa";
+import { FaPlay, FaSpinner, FaTimes } from "react-icons/fa";
 
 interface VoiceSettingsProps {
   voice: string;
@@ -10,14 +9,14 @@ interface VoiceSettingsProps {
   onPreview: (text: string) => Promise<string>;
 }
 
-const VOICES: Array<{ id: string; label: string }> = [
-  { id: "Chloe", label: "Chloe (Female)" },
-  { id: "Mia", label: "Mia (Female)" },
-  { id: "Milo", label: "Milo (Male)" },
-  { id: "Dean", label: "Dean (Male)" },
+const VOICES: Array<{ id: string; label: string; gender: string }> = [
+  { id: "Chloe", label: "Chloe", gender: "Female" },
+  { id: "Mia", label: "Mia", gender: "Female" },
+  { id: "Milo", label: "Milo", gender: "Male" },
+  { id: "Dean", label: "Dean", gender: "Male" },
 ];
 
-const SPEED_OPTIONS: Array<{ value: number; label: string }> = [
+const SPEED_OPTIONS = [
   { value: 0.8, label: "Slow" },
   { value: 1.0, label: "Normal" },
   { value: 1.2, label: "Fast" },
@@ -28,7 +27,7 @@ export default function VoiceSettings(props: VoiceSettingsProps) {
   const voice: string = props.voice || "Chloe";
   const speed: number = props.speed ?? 1.0;
   const volume: number = props.volume ?? 1.0;
-  const [open, setOpen] = useState(false);
+
   const [previewing, setPreviewing] = useState(false);
   const [audioEl, setAudioEl] = useState<HTMLAudioElement | null>(null);
 
@@ -36,7 +35,7 @@ export default function VoiceSettings(props: VoiceSettingsProps) {
     if (previewing) return;
     setPreviewing(true);
     try {
-      const url = await onPreview("Hello! This is a preview of the selected voice. How does it sound?");
+      const url = await onPreview("Hello! This is a preview of the selected voice.");
       const audio = new Audio(url);
       audio.volume = volume;
       audio.playbackRate = speed;
@@ -58,93 +57,114 @@ export default function VoiceSettings(props: VoiceSettingsProps) {
     }
   };
 
-  const modal = (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/30">
-      <div className="bg-white rounded-2xl shadow-xl p-5 w-80 space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-bold text-gray-800">Voice Settings</h3>
-          <button onClick={() => setOpen(false)} className="text-gray-400 hover:text-gray-600">
-            <FaTimes size={16} />
-          </button>
-        </div>
+  return (
+    <div
+      className="p-5 rounded-3xl space-y-5"
+      style={{
+        background: "white",
+        boxShadow: "0 1px 2px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06)",
+      }}
+    >
+      <div className="text-xs font-semibold" style={{ color: "var(--color-text)" }}>
+        Voice Settings
+      </div>
 
-        <div>
-          <label className="text-xs font-medium text-gray-500 block mb-1.5">Voice</label>
-          <select
-            value={voice}
-            onChange={(e) => onChange({ voice: e.target.value })}
-            className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-          >
-            {VOICES.map((v) => (
-              <option key={v.id} value={v.id}>{v.label}</option>
-            ))}
-          </select>
-        </div>
+      {/* 音色选择 - 头像卡片 */}
+      <div className="grid grid-cols-2 gap-2">
+        {VOICES.map((v) => {
+          const isActive = voice === v.id;
+          return (
+            <button
+              key={v.id}
+              onClick={() => onChange({ voice: v.id })}
+              className="flex flex-col items-center gap-1.5 p-3 rounded-2xl transition-all duration-200"
+              style={{
+                background: isActive ? "rgba(91,108,255,0.08)" : "var(--color-bg)",
+                border: isActive ? "1.5px solid var(--color-primary)" : "1.5px solid transparent",
+                boxShadow: isActive ? "0 0 0 3px rgba(91,108,255,0.1)" : "none",
+              }}
+            >
+              <div
+                className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold"
+                style={{ background: isActive ? "linear-gradient(135deg, #5B6CFF, #7B61FF)" : "#C7C7CC" }}
+              >
+                {v.label[0]}
+              </div>
+              <div className="text-[11px] font-medium" style={{ color: isActive ? "var(--color-primary)" : "var(--color-text)" }}>
+                {v.label}
+              </div>
+              <div className="text-[9px]" style={{ color: "var(--color-text-secondary)" }}>
+                {v.gender}
+              </div>
+            </button>
+          );
+        })}
+      </div>
 
-        <div>
-          <label className="text-xs font-medium text-gray-500 block mb-1.5">Speed: {speed}x</label>
-          <div className="flex gap-2">
-            {SPEED_OPTIONS.map((s) => (
+      {/* 语速 Segmented Control */}
+      <div>
+        <div className="text-[11px] font-medium mb-2" style={{ color: "var(--color-text-secondary)" }}>
+          Speed
+        </div>
+        <div className="flex p-1 rounded-2xl" style={{ background: "var(--color-bg)" }}>
+          {SPEED_OPTIONS.map((s) => {
+            const isActive = speed === s.value;
+            return (
               <button
                 key={s.value}
                 onClick={() => onChange({ speed: s.value })}
-                className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                  speed === s.value
-                    ? "bg-blue-500 text-white"
-                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                }`}
+                className="flex-1 py-1.5 rounded-xl text-xs font-medium transition-all duration-200"
+                style={{
+                  background: isActive ? "white" : "transparent",
+                  color: isActive ? "var(--color-primary)" : "var(--color-text-secondary)",
+                  boxShadow: isActive ? "0 1px 4px rgba(0,0,0,0.08)" : "none",
+                }}
               >
                 {s.label}
               </button>
-            ))}
-          </div>
+            );
+          })}
         </div>
-
-        <div>
-          <label className="text-xs font-medium text-gray-500 block mb-1.5">
-            Volume: {Math.round(volume * 100)}%
-          </label>
-          <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.05"
-            value={volume}
-            onChange={(e) => onChange({ volume: parseFloat(e.target.value) })}
-            className="w-full accent-blue-500"
-          />
-        </div>
-
-        <button
-          onClick={audioEl ? stopPreview : handlePreview}
-          disabled={previewing}
-          className={`w-full py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
-            audioEl
-              ? "bg-red-500 text-white hover:bg-red-600"
-              : "bg-green-500 text-white hover:bg-green-600"
-          }`}
-        >
-          {previewing ? (
-            <><FaSpinner className="animate-spin" size={12} /> Generating...</>
-          ) : audioEl ? (
-            <><FaTimes size={12} /> Stop Preview</>
-          ) : (
-            <><FaPlay size={12} /> Preview Voice</>
-          )}
-        </button>
       </div>
-    </div>
-  );
 
-  return (
-    <>
+      {/* 音量 */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-[11px] font-medium" style={{ color: "var(--color-text-secondary)" }}>Volume</span>
+          <span className="text-[11px] font-semibold" style={{ color: "var(--color-primary)" }}>
+            {Math.round(volume * 100)}%
+          </span>
+        </div>
+        <input
+          type="range"
+          min="0"
+          max="1"
+          step="0.05"
+          value={volume}
+          onChange={(e) => onChange({ volume: parseFloat(e.target.value) })}
+          className="w-full accent-[#5B6CFF]"
+        />
+      </div>
+
+      {/* 试听 */}
       <button
-        onClick={() => setOpen(true)}
-        className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors"
+        onClick={audioEl ? stopPreview : handlePreview}
+        disabled={previewing}
+        className="w-full py-3 rounded-2xl text-sm font-semibold text-white transition-all duration-200 flex items-center justify-center gap-2"
+        style={{
+          background: audioEl ? "var(--color-error)" : "linear-gradient(135deg, #5B6CFF, #7B61FF)",
+          boxShadow: audioEl ? "0 4px 12px rgba(255,59,48,0.25)" : "0 4px 12px rgba(91,108,255,0.3)",
+          opacity: previewing ? 0.7 : 1,
+        }}
       >
-        <FaCog size={12} /> Voice
+        {previewing ? (
+          <><FaSpinner className="animate-spin" size={13} /> Generating...</>
+        ) : audioEl ? (
+          <><FaTimes size={13} /> Stop Preview</>
+        ) : (
+          <><FaPlay size={13} /> Preview Voice</>
+        )}
       </button>
-      {open && createPortal(modal, document.body)}
-    </>
+    </div>
   );
 }

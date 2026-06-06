@@ -1,14 +1,18 @@
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useStore } from "./store";
 import { useWebSocket } from "./hooks/useWebSocket";
 import { useSpeechRecognition } from "./hooks/useSpeechRecognition";
 import ScenarioSelector from "./components/ScenarioSelector";
 import ChatBubble from "./components/ChatBubble";
 import VoiceSettings from "./components/VoiceSettings";
-import { FaComments, FaMicrophone, FaSpinner, FaHeadphones, FaComment } from "react-icons/fa";
+import { FaHeadphones, FaComment, FaMicrophone, FaSpinner, FaPause, FaPlay, FaRedo, FaGlobe } from "react-icons/fa";
 
 export default function App() {
-  const { scenario, messages, connected, playingId, pausedId, setPlayingId, setPausedId, listenMode, setListenMode, voiceSettings, setVoiceSettings } = useStore();
+  const {
+    scenario, messages, connected, playingId, pausedId,
+    setPlayingId, setPausedId, listenMode, setListenMode,
+    voiceSettings, setVoiceSettings,
+  } = useStore();
   const { sendText, setScenario, sendVoiceSettings, previewVoice } = useWebSocket();
   const { startListening, stopListening, isListening } = useSpeechRecognition();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -20,30 +24,21 @@ export default function App() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // 监听后端回复，收到后取消 processing 状态 + 自动播放语音
-  // 切换场景时不自动播放
   useEffect(() => {
     const scenarioChanged = prevScenarioRef.current !== scenario;
     prevScenarioRef.current = scenario;
-
-    if (scenarioChanged) return; // 切场景，跳过自动播放
-
+    if (scenarioChanged) return;
     if (messages.length > 0) {
       const last = messages[messages.length - 1];
       if (last.role === "ai") {
         setProcessing(false);
-        if (last.audioUrl) {
-          playAudio(last.id, last.audioUrl);
-        }
+        if (last.audioUrl) playAudio(last.id, last.audioUrl);
       }
     }
   }, [messages, scenario]);
 
-  // 播放音频
   const playAudio = (messageId: string, audioUrl: string) => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-    }
+    if (audioRef.current) audioRef.current.pause();
     const audio = new Audio(audioUrl);
     audioRef.current = audio;
     setPlayingId(messageId);
@@ -52,13 +47,12 @@ export default function App() {
     audio.playbackRate = voiceSettings.speed;
     audio.onended = () => {
       setPlayingId(null);
-      setPausedId(messageId); // 播放完毕，标记为暂停态（可重播）
+      setPausedId(messageId);
       audioRef.current = null;
     };
     audio.play().catch(console.error);
   };
 
-  // 暂停
   const handlePause = (messageId: string) => {
     if (audioRef.current && playingId === messageId) {
       audioRef.current.pause();
@@ -67,7 +61,6 @@ export default function App() {
     }
   };
 
-  // 继续播放
   const handleResume = (messageId: string) => {
     if (audioRef.current && pausedId === messageId) {
       audioRef.current.play().catch(console.error);
@@ -76,12 +69,10 @@ export default function App() {
     }
   };
 
-  // 重头播放
   const handleReplay = (messageId: string, audioUrl: string) => {
     playAudio(messageId, audioUrl);
   };
 
-  // 点击切换录音
   const handleToggleRecording = () => {
     if (!scenario || !connected || processing) return;
     if (isListening) {
@@ -97,117 +88,270 @@ export default function App() {
   };
 
   const disabled = !scenario || !connected || processing;
+  const currentAudioMsg = messages.filter(m => m.role === "ai" && m.audioUrl).pop();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col">
-      <header className="bg-white/80 backdrop-blur-sm shadow-sm px-4 py-3">
-        <div className="max-w-2xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <FaComments className="text-blue-500" size={24} />
-            <h1 className="text-xl font-bold text-gray-800">SpeakBuddy</h1>
+    <div className="min-h-screen flex flex-col" style={{ background: "var(--color-bg)" }}>
+      {/* ===== 顶部导航栏 ===== */}
+      <header
+        className="sticky top-0 z-40 h-[72px] flex items-center justify-between px-6"
+        style={{
+          background: "rgba(255,255,255,0.75)",
+          backdropFilter: "blur(24px)",
+          WebkitBackdropFilter: "blur(24px)",
+          borderBottom: "1px solid rgba(0,0,0,0.06)",
+        }}
+      >
+        {/* 左侧 Logo */}
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-xl flex items-center justify-center text-white font-bold text-sm"
+            style={{ background: "linear-gradient(135deg, #5B6CFF, #7B61FF)" }}>
+            S
           </div>
-          <div className="flex items-center gap-2">
-            {/* 语音设置 */}
-            <VoiceSettings
-              voice={voiceSettings.voice}
-              speed={voiceSettings.speed}
-              volume={voiceSettings.volume}
-              onChange={(s) => {
-                setVoiceSettings(s);
-                sendVoiceSettings(s);
-              }}
-              onPreview={previewVoice}
-            />
-            {/* 纯听模式切换 */}
+          <div>
+            <div className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
+              SpeakBuddy AI
+            </div>
+            <div className="text-[11px]" style={{ color: "var(--color-text-secondary)" }}>
+              Your AI English Partner
+            </div>
+          </div>
+        </div>
+
+        {/* 中间场景切换 */}
+        <div className="flex items-center gap-1 p-1 rounded-2xl" style={{ background: "rgba(0,0,0,0.04)" }}>
+          {[
+            { id: "interview", label: "Interview", icon: "💼" },
+            { id: "ordering", label: "Restaurant", icon: "🍽️" },
+            { id: "meeting", label: "Meeting", icon: "👥" },
+          ].map((s) => (
             <button
-              onClick={() => setListenMode(!listenMode)}
-              className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium transition-colors ${
-                listenMode
-                  ? "bg-purple-100 text-purple-600"
-                  : "bg-gray-100 text-gray-500 hover:bg-gray-200"
-              }`}
+              key={s.id}
+              onClick={() => setScenario(s.id)}
+              className="px-4 py-1.5 rounded-xl text-xs font-medium transition-all duration-200"
+              style={{
+                background: scenario === s.id ? "white" : "transparent",
+                color: scenario === s.id ? "var(--color-primary)" : "var(--color-text-secondary)",
+                boxShadow: scenario === s.id ? "0 1px 4px rgba(0,0,0,0.08)" : "none",
+              }}
             >
-              {listenMode ? <FaComment size={12} /> : <FaHeadphones size={12} />}
-              {listenMode ? "Show Text" : "Listen Only"}
+              {s.icon} {s.label}
             </button>
-            <span
-              className={`w-2 h-2 rounded-full ${
-                connected ? "bg-green-500" : "bg-red-500"
-              }`}
+          ))}
+        </div>
+
+        {/* 右侧控制 */}
+        <div className="flex items-center gap-3">
+          {/* 纯听模式 */}
+          <button
+            onClick={() => setListenMode(!listenMode)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-200"
+            style={{
+              background: listenMode ? "rgba(91,108,255,0.1)" : "transparent",
+              color: listenMode ? "var(--color-primary)" : "var(--color-text-secondary)",
+            }}
+          >
+            {listenMode ? <FaComment size={11} /> : <FaHeadphones size={11} />}
+            {listenMode ? "Show Text" : "Listen Only"}
+          </button>
+
+          {/* 语言 */}
+          <div className="flex items-center gap-1 text-xs" style={{ color: "var(--color-text-secondary)" }}>
+            <FaGlobe size={11} /> EN
+          </div>
+
+          {/* 连接状态 */}
+          <div className="flex items-center gap-1.5">
+            <div
+              className="w-2 h-2 rounded-full"
+              style={{ background: connected ? "var(--color-success)" : "var(--color-error)" }}
             />
-            <span className="text-xs text-gray-500">
-              {connected ? "Connected" : "Disconnected"}
+            <span className="text-[11px]" style={{ color: "var(--color-text-secondary)" }}>
+              {connected ? "Online" : "Offline"}
             </span>
           </div>
         </div>
       </header>
 
-      <main className="flex-1 flex flex-col max-w-2xl mx-auto w-full px-4 py-4">
-        <div className="mb-4">
-          <ScenarioSelector onSelect={setScenario} currentScenario={scenario} />
-        </div>
+      {/* ===== 三栏主体 ===== */}
+      <div className="flex-1 flex max-w-[1600px] mx-auto w-full">
+        {/* 左侧场景栏 */}
+        <ScenarioSelector onSelect={setScenario} currentScenario={scenario} />
 
-        <div className="flex-1 overflow-y-auto bg-white/60 backdrop-blur-sm rounded-2xl p-4 mb-4 shadow-inner min-h-[300px]">
-          {!scenario && (
-            <div className="flex flex-col items-center justify-center h-full text-gray-400">
-              <FaComments size={48} className="mb-3 opacity-30" />
-              <p className="text-sm">Choose a scenario to start practicing</p>
+        {/* 中央聊天区 */}
+        <main className="flex-1 flex flex-col min-w-0 px-4 py-4">
+          {/* 场景提示卡 */}
+          {scenario && (
+            <div
+              className="mb-4 p-4 rounded-3xl"
+              style={{
+                background: "linear-gradient(135deg, rgba(91,108,255,0.06), rgba(123,97,255,0.06))",
+                border: "1px solid rgba(91,108,255,0.08)",
+              }}
+            >
+              <div className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
+                {scenario === "interview" ? "Interview Scenario" : scenario === "ordering" ? "Restaurant Scenario" : "Meeting Scenario"}
+              </div>
+              <div className="text-xs mt-1" style={{ color: "var(--color-text-secondary)" }}>
+                {scenario === "interview"
+                  ? "You are an experienced interviewer. Ask professional questions naturally."
+                  : scenario === "ordering"
+                  ? "You are a friendly waiter. Take orders and suggest dishes."
+                  : "You are a project manager. Lead the daily standup meeting."}
+              </div>
             </div>
           )}
-          {scenario && messages.length === 0 && (
-            <div className="flex flex-col items-center justify-center h-full text-gray-400">
-              <p className="text-sm">
-                Click the microphone button and start speaking!
-              </p>
-            </div>
-          )}
-          {messages.map((msg) => (
-            <ChatBubble
-              key={msg.id}
-              message={msg}
-              isPlaying={playingId === msg.id}
-              isPaused={pausedId === msg.id}
-              listenMode={listenMode}
-              onPause={() => handlePause(msg.id)}
-              onResume={() => handleResume(msg.id)}
-              onReplay={() => handleReplay(msg.id, msg.audioUrl!)}
-            />
-          ))}
-          <div ref={messagesEndRef} />
-        </div>
 
-        {/* 录音按钮 */}
-        <div className="flex flex-col items-center gap-2 py-2">
-          <button
-            onClick={handleToggleRecording}
-            disabled={disabled}
-            className={`w-16 h-16 rounded-full flex items-center justify-center text-white text-xl shadow-lg transition-all duration-200 select-none ${
-              isListening
-                ? "bg-red-500 scale-110 animate-pulse shadow-red-300"
-                : processing
-                ? "bg-yellow-500 cursor-wait"
-                : disabled
-                ? "bg-gray-400 cursor-not-allowed"
-                : "bg-blue-500 hover:bg-blue-600 hover:scale-105 active:scale-95"
-            }`}
-          >
-            {processing ? (
-              <FaSpinner className="animate-spin" size={22} />
-            ) : (
-              <FaMicrophone size={22} />
+          {/* 消息区域 */}
+          <div className="flex-1 overflow-y-auto px-2" style={{ minHeight: 0 }}>
+            {!scenario && (
+              <div className="flex flex-col items-center justify-center h-full" style={{ color: "var(--color-text-secondary)" }}>
+                <div className="text-5xl mb-4 opacity-20">🎙️</div>
+                <p className="text-sm">Choose a scenario to start practicing</p>
+              </div>
             )}
-          </button>
-          <p className="text-xs text-gray-500 select-none">
-            {!scenario
-              ? "Select a scenario first"
-              : isListening
-              ? "Click to stop"
-              : processing
-              ? "AI is thinking..."
-              : "Click to speak"}
-          </p>
-        </div>
-      </main>
+            {scenario && messages.length === 0 && (
+              <div className="flex flex-col items-center justify-center h-full" style={{ color: "var(--color-text-secondary)" }}>
+                <div className="text-5xl mb-4 opacity-20">💬</div>
+                <p className="text-sm">Click the microphone and start speaking!</p>
+              </div>
+            )}
+            {messages.map((msg) => (
+              <ChatBubble
+                key={msg.id}
+                message={msg}
+                isPlaying={playingId === msg.id}
+                isPaused={pausedId === msg.id}
+                listenMode={listenMode}
+                onPause={() => handlePause(msg.id)}
+                onResume={() => handleResume(msg.id)}
+                onReplay={() => handleReplay(msg.id, msg.audioUrl!)}
+              />
+            ))}
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* 底部麦克风 Dock */}
+          <div className="flex justify-center py-4">
+            <div
+              className="flex items-center gap-4 px-6 py-3 rounded-full"
+              style={{
+                background: "rgba(255,255,255,0.75)",
+                backdropFilter: "blur(24px)",
+                boxShadow: "0 1px 2px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06)",
+              }}
+            >
+              {/* 录音按钮 */}
+              <button
+                onClick={handleToggleRecording}
+                disabled={disabled}
+                className="relative w-14 h-14 rounded-full flex items-center justify-center text-white transition-all duration-200 select-none"
+                style={{
+                  background: isListening
+                    ? "var(--color-error)"
+                    : disabled
+                    ? "#C7C7CC"
+                    : "linear-gradient(135deg, #5B6CFF, #7B61FF)",
+                  transform: isListening ? "scale(1.1)" : "scale(1)",
+                  boxShadow: isListening
+                    ? "0 0 0 8px rgba(255,59,48,0.15)"
+                    : "0 4px 12px rgba(91,108,255,0.3)",
+                }}
+              >
+                {isListening && (
+                  <span
+                    className="absolute inset-0 rounded-full"
+                    style={{ animation: "pulse-ring 1.5s infinite", background: "rgba(255,59,48,0.2)" }}
+                  />
+                )}
+                {processing ? <FaSpinner className="animate-spin" size={20} /> : <FaMicrophone size={20} />}
+              </button>
+
+              {/* 状态文字 */}
+              <span className="text-xs min-w-[100px]" style={{ color: "var(--color-text-secondary)" }}>
+                {!scenario
+                  ? "Select a scenario"
+                  : isListening
+                  ? "Listening..."
+                  : processing
+                  ? "AI is thinking..."
+                  : "Click to speak"}
+              </span>
+
+              {/* 当前音频控制 */}
+              {currentAudioMsg && (
+                <div className="flex items-center gap-2 pl-2" style={{ borderLeft: "1px solid rgba(0,0,0,0.06)" }}>
+                  {playingId === currentAudioMsg.id ? (
+                    <button
+                      onClick={() => handlePause(currentAudioMsg.id)}
+                      className="w-8 h-8 rounded-full flex items-center justify-center transition-colors"
+                      style={{ background: "rgba(255,59,48,0.1)", color: "var(--color-error)" }}
+                    >
+                      <FaPause size={12} />
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleResume(currentAudioMsg.id)}
+                      className="w-8 h-8 rounded-full flex items-center justify-center transition-colors"
+                      style={{ background: "rgba(91,108,255,0.1)", color: "var(--color-primary)" }}
+                    >
+                      <FaPlay size={12} />
+                    </button>
+                  )}
+                  <button
+                    onClick={() => handleReplay(currentAudioMsg.id, currentAudioMsg.audioUrl!)}
+                    className="w-8 h-8 rounded-full flex items-center justify-center transition-colors"
+                    style={{ background: "rgba(52,199,89,0.1)", color: "var(--color-success)" }}
+                  >
+                    <FaRedo size={12} />
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </main>
+
+        {/* 右侧辅助区 */}
+        <aside className="w-[360px] flex-shrink-0 py-4 pr-4 space-y-4 overflow-y-auto hidden lg:block">
+          {/* 语音设置面板 */}
+          <VoiceSettings
+            voice={voiceSettings.voice}
+            speed={voiceSettings.speed}
+            volume={voiceSettings.volume}
+            onChange={(s) => { setVoiceSettings(s); sendVoiceSettings(s); }}
+            onPreview={previewVoice}
+          />
+
+          {/* 当前场景信息 */}
+          {scenario && (
+            <div
+              className="p-4 rounded-3xl"
+              style={{
+                background: "white",
+                boxShadow: "0 1px 2px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06)",
+              }}
+            >
+              <div className="text-xs font-semibold mb-3" style={{ color: "var(--color-text)" }}>
+                Session Stats
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="text-center p-3 rounded-2xl" style={{ background: "var(--color-bg)" }}>
+                  <div className="text-lg font-bold" style={{ color: "var(--color-primary)" }}>
+                    {messages.filter(m => m.role === "user").length}
+                  </div>
+                  <div className="text-[10px]" style={{ color: "var(--color-text-secondary)" }}>Messages</div>
+                </div>
+                <div className="text-center p-3 rounded-2xl" style={{ background: "var(--color-bg)" }}>
+                  <div className="text-lg font-bold" style={{ color: "var(--color-accent)" }}>
+                    {messages.filter(m => m.evaluation).length}
+                  </div>
+                  <div className="text-[10px]" style={{ color: "var(--color-text-secondary)" }}>Evaluated</div>
+                </div>
+              </div>
+            </div>
+          )}
+        </aside>
+      </div>
     </div>
   );
 }

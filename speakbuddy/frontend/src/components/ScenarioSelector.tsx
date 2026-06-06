@@ -1,6 +1,3 @@
-import React from "react";
-import { FaBriefcase, FaUtensils, FaUsers } from "react-icons/fa";
-
 interface ScenarioSelectorProps {
   onSelect: (scenario: string) => void;
   currentScenario: string | null;
@@ -9,21 +6,21 @@ interface ScenarioSelectorProps {
 const scenarios = [
   {
     id: "interview",
-    label: "Job Interview",
-    icon: FaBriefcase,
-    color: "bg-blue-500 hover:bg-blue-600",
+    label: "Interview",
+    icon: "💼",
+    subtitle: "Job interview practice",
   },
   {
     id: "ordering",
-    label: "Restaurant Order",
-    icon: FaUtensils,
-    color: "bg-green-500 hover:bg-green-600",
+    label: "Restaurant",
+    icon: "🍽️",
+    subtitle: "Food ordering practice",
   },
   {
     id: "meeting",
-    label: "Team Meeting",
-    icon: FaUsers,
-    color: "bg-purple-500 hover:bg-purple-600",
+    label: "Meeting",
+    icon: "👥",
+    subtitle: "Business meeting practice",
   },
 ];
 
@@ -32,25 +29,52 @@ export default function ScenarioSelector({
   currentScenario,
 }: ScenarioSelectorProps) {
   return (
-    <div className="flex gap-3 justify-center flex-wrap">
+    <aside className="w-[280px] flex-shrink-0 py-4 pl-4 space-y-3 hidden md:block">
+      <div
+        className="text-xs font-semibold px-2 mb-2"
+        style={{ color: "var(--color-text-secondary)" }}
+      >
+        Scenarios
+      </div>
       {scenarios.map((s) => {
-        const Icon = s.icon;
         const isActive = currentScenario === s.id;
         return (
           <button
             key={s.id}
             onClick={() => onSelect(s.id)}
-            className={`flex items-center gap-2 px-5 py-3 rounded-xl text-white font-medium transition-all duration-200 shadow-md ${
-              isActive
-                ? `${s.color} ring-2 ring-offset-2 ring-gray-400 scale-105`
-                : `${s.color} opacity-80 hover:opacity-100 hover:scale-105`
-            }`}
+            className="w-full flex items-center gap-3 p-4 rounded-3xl text-left transition-all duration-200 relative overflow-hidden"
+            style={{
+              background: isActive ? "rgba(91,108,255,0.08)" : "white",
+              border: isActive
+                ? "1px solid rgba(91,108,255,0.15)"
+                : "1px solid rgba(0,0,0,0.04)",
+              boxShadow: isActive
+                ? "0 1px 2px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06)"
+                : "0 1px 2px rgba(0,0,0,0.02)",
+            }}
           >
-            <Icon size={18} />
-            {s.label}
+            {/* 左侧高亮条 */}
+            {isActive && (
+              <div
+                className="absolute left-0 top-0 bottom-0 w-1 rounded-r"
+                style={{ background: "linear-gradient(180deg, #5B6CFF, #7B61FF)" }}
+              />
+            )}
+            <div className="text-2xl">{s.icon}</div>
+            <div>
+              <div
+                className="text-sm font-medium"
+                style={{ color: isActive ? "var(--color-primary)" : "var(--color-text)" }}
+              >
+                {s.label}
+              </div>
+              <div className="text-[11px]" style={{ color: "var(--color-text-secondary)" }}>
+                {s.subtitle}
+              </div>
+            </div>
           </button>
         );
       })}
-    </div>
+    </aside>
   );
 }
