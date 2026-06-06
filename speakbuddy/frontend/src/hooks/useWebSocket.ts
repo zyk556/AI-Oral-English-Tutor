@@ -106,8 +106,8 @@ export function useWebSocket() {
     if (ws && ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify({ type: "set_scenario", scenario }));
     }
-    useStore.getState().clearMessages();
-  }, []);
+    setStoreScenario(scenario);
+  }, [setStoreScenario]);
 
   return { sendText, setScenario };
 }
