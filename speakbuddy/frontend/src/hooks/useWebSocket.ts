@@ -4,6 +4,7 @@ import { useStore } from "../store";
 export function useWebSocket() {
   const wsRef = useRef<WebSocket | null>(null);
   const previewResolveRef = useRef<((url: string) => void) | null>(null);
+  const previewWaitingRef = useRef(false);
 
   const {
     setConnected,
@@ -42,9 +43,10 @@ export function useWebSocket() {
           const audioUrl = URL.createObjectURL(blob);
 
           // 如果有等待中的试听请求，返回音频 URL
-          if (previewResolveRef.current) {
+          if (previewWaitingRef.current && previewResolveRef.current) {
             previewResolveRef.current(audioUrl);
             previewResolveRef.current = null;
+            previewWaitingRef.current = false;
             return;
           }
 
@@ -141,11 +143,13 @@ export function useWebSocket() {
         return;
       }
       previewResolveRef.current = resolve;
+      previewWaitingRef.current = true;
       ws.send(JSON.stringify({ type: "preview_voice", text }));
       // 10 秒超时
       setTimeout(() => {
-        if (previewResolveRef.current) {
+        if (previewWaitingRef.current) {
           previewResolveRef.current = null;
+          previewWaitingRef.current = false;
           reject(new Error("Preview timeout"));
         }
       }, 10000);
