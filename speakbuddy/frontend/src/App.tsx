@@ -7,45 +7,68 @@ import ChatBubble from "./components/ChatBubble";
 import { FaComments, FaMicrophone, FaSpinner } from "react-icons/fa";
 
 export default function App() {
-  const { scenario, messages, connected } = useStore();
+  const { scenario, messages, connected, playingId, pausedId, setPlayingId, setPausedId } = useStore();
   const { sendText, setScenario } = useWebSocket();
   const { startListening, stopListening, isListening } = useSpeechRecognition();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [playingId, setPlayingId] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // 监听后端回复，收到后取消 processing 状态
+  // 监听后端回复，收到后取消 processing 状态 + 自动播放语音
   useEffect(() => {
-    if (processing && messages.length > 0) {
+    if (messages.length > 0) {
       const last = messages[messages.length - 1];
       if (last.role === "ai") {
         setProcessing(false);
+        if (last.audioUrl) {
+          playAudio(last.id, last.audioUrl);
+        }
       }
     }
-  }, [messages, processing]);
+  }, [messages]);
 
-  const handlePlayAudio = (messageId: string, audioUrl: string) => {
-    if (audioRef.current && playingId === messageId) {
+  // 播放音频
+  const playAudio = (messageId: string, audioUrl: string) => {
+    if (audioRef.current) {
       audioRef.current.pause();
-      audioRef.current = null;
-      setPlayingId(null);
-      return;
     }
-    if (audioRef.current) audioRef.current.pause();
-
     const audio = new Audio(audioUrl);
     audioRef.current = audio;
     setPlayingId(messageId);
+    setPausedId(null);
     audio.onended = () => {
       setPlayingId(null);
+      setPausedId(messageId); // 播放完毕，标记为暂停态（可重播）
       audioRef.current = null;
     };
     audio.play().catch(console.error);
+  };
+
+  // 暂停
+  const handlePause = (messageId: string) => {
+    if (audioRef.current && playingId === messageId) {
+      audioRef.current.pause();
+      setPlayingId(null);
+      setPausedId(messageId);
+    }
+  };
+
+  // 继续播放
+  const handleResume = (messageId: string) => {
+    if (audioRef.current && pausedId === messageId) {
+      audioRef.current.play().catch(console.error);
+      setPlayingId(messageId);
+      setPausedId(null);
+    }
+  };
+
+  // 重头播放
+  const handleReplay = (messageId: string, audioUrl: string) => {
+    playAudio(messageId, audioUrl);
   };
 
   // 点击切换录音
@@ -101,7 +124,7 @@ export default function App() {
           {scenario && messages.length === 0 && (
             <div className="flex flex-col items-center justify-center h-full text-gray-400">
               <p className="text-sm">
-                Hold the microphone button and start speaking!
+                Click the microphone button and start speaking!
               </p>
             </div>
           )}
@@ -110,7 +133,10 @@ export default function App() {
               key={msg.id}
               message={msg}
               isPlaying={playingId === msg.id}
-              onPlayAudio={handlePlayAudio}
+              isPaused={pausedId === msg.id}
+              onPause={() => handlePause(msg.id)}
+              onResume={() => handleResume(msg.id)}
+              onReplay={() => handleReplay(msg.id, msg.audioUrl!)}
             />
           ))}
           <div ref={messagesEndRef} />

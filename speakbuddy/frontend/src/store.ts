@@ -32,6 +32,12 @@ interface AppState {
   addAIMessage: (text: string, audioUrl?: string) => void;
   addEvaluation: (messageId: string, evaluation: Evaluation) => void;
 
+  // 音频播放状态
+  playingId: string | null;
+  pausedId: string | null;
+  setPlayingId: (id: string | null) => void;
+  setPausedId: (id: string | null) => void;
+
   connected: boolean;
   setConnected: (connected: boolean) => void;
 }
@@ -105,6 +111,11 @@ export const useStore = create<AppState>((set, get) => ({
       };
     }),
 
-  connected: false,
+  playingId: null as string | null,
+  pausedId: null as string | null,
+  setPlayingId: (id: string | null) => set({ playingId: id, pausedId: null }),
+  setPausedId: (id: string | null) => set({ pausedId: id }),
+
+  connected: false as boolean,
   setConnected: (connected) => set({ connected }),
 }));
