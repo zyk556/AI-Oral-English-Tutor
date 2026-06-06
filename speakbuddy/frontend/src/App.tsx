@@ -4,11 +4,12 @@ import { useWebSocket } from "./hooks/useWebSocket";
 import { useSpeechRecognition } from "./hooks/useSpeechRecognition";
 import ScenarioSelector from "./components/ScenarioSelector";
 import ChatBubble from "./components/ChatBubble";
+import VoiceSettings from "./components/VoiceSettings";
 import { FaComments, FaMicrophone, FaSpinner, FaHeadphones, FaComment } from "react-icons/fa";
 
 export default function App() {
-  const { scenario, messages, connected, playingId, pausedId, setPlayingId, setPausedId, listenMode, setListenMode } = useStore();
-  const { sendText, setScenario } = useWebSocket();
+  const { scenario, messages, connected, playingId, pausedId, setPlayingId, setPausedId, listenMode, setListenMode, voiceSettings, setVoiceSettings } = useStore();
+  const { sendText, setScenario, sendVoiceSettings, previewVoice } = useWebSocket();
   const { startListening, stopListening, isListening } = useSpeechRecognition();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -47,6 +48,8 @@ export default function App() {
     audioRef.current = audio;
     setPlayingId(messageId);
     setPausedId(null);
+    audio.volume = voiceSettings.volume;
+    audio.playbackRate = voiceSettings.speed;
     audio.onended = () => {
       setPlayingId(null);
       setPausedId(messageId); // 播放完毕，标记为暂停态（可重播）
@@ -104,6 +107,17 @@ export default function App() {
             <h1 className="text-xl font-bold text-gray-800">SpeakBuddy</h1>
           </div>
           <div className="flex items-center gap-2">
+            {/* 语音设置 */}
+            <VoiceSettings
+              voice={voiceSettings.voice}
+              speed={voiceSettings.speed}
+              volume={voiceSettings.volume}
+              onChange={(s) => {
+                setVoiceSettings(s);
+                sendVoiceSettings(s);
+              }}
+              onPreview={previewVoice}
+            />
             {/* 纯听模式切换 */}
             <button
               onClick={() => setListenMode(!listenMode)}

@@ -3,6 +3,8 @@ import { useStore } from "../store";
 
 export function useWebSocket() {
   const wsRef = useRef<WebSocket | null>(null);
+  const previewResolveRef = useRef<((url: string) => void) | null>(null);
+  const previewWaitingRef = useRef(false);
 
   const {
     setConnected,
@@ -39,6 +41,15 @@ export function useWebSocket() {
         event.data.arrayBuffer().then((buffer) => {
           const blob = new Blob([buffer], { type: "audio/wav" });
           const audioUrl = URL.createObjectURL(blob);
+
+          // 如果有等待中的试听请求，返回音频 URL
+          if (previewWaitingRef.current && previewResolveRef.current) {
+            previewResolveRef.current(audioUrl);
+            previewResolveRef.current = null;
+            previewWaitingRef.current = false;
+            return;
+          }
+
           const state = useStore.getState();
           const lastMsg = state.messages[state.messages.length - 1];
           if (lastMsg && lastMsg.role === "ai" && !lastMsg.audioUrl) {
@@ -117,5 +128,33 @@ export function useWebSocket() {
     setStoreScenario(scenario);
   }, [setStoreScenario]);
 
-  return { sendText, setScenario };
+  const sendVoiceSettings = useCallback((settings: { voice?: string; speed?: number; volume?: number }) => {
+    const ws = wsRef.current;
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: "voice_settings", settings }));
+    }
+  }, []);
+
+  const previewVoice = useCallback((text: string): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const ws = wsRef.current;
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
+        reject(new Error("WebSocket not connected"));
+        return;
+      }
+      previewResolveRef.current = resolve;
+      previewWaitingRef.current = true;
+      ws.send(JSON.stringify({ type: "preview_voice", text }));
+      // 10 秒超时
+      setTimeout(() => {
+        if (previewWaitingRef.current) {
+          previewResolveRef.current = null;
+          previewWaitingRef.current = false;
+          reject(new Error("Preview timeout"));
+        }
+      }, 10000);
+    });
+  }, []);
+
+  return { sendText, setScenario, sendVoiceSettings, previewVoice };
 }

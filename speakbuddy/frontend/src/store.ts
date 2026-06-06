@@ -45,6 +45,10 @@ interface AppState {
   // 纯听模式
   listenMode: boolean;
   setListenMode: (v: boolean) => void;
+
+  // 语音设置
+  voiceSettings: { voice: string; speed: number; volume: number };
+  setVoiceSettings: (s: { voice?: string; speed?: number; volume?: number }) => void;
 }
 
 let messageCounter = 0;
@@ -122,4 +126,14 @@ export const useStore = create<AppState>((set, get) => ({
 
   listenMode: false as boolean,
   setListenMode: (v) => set({ listenMode: v }),
+
+  voiceSettings: { voice: "Chloe", speed: 1.0, volume: 1.0 },
+  setVoiceSettings: (s: { voice?: string; speed?: number; volume?: number }) =>
+    set((state) => ({
+      voiceSettings: {
+        voice: s.voice ?? state.voiceSettings.voice,
+        speed: s.speed ?? state.voiceSettings.speed,
+        volume: s.volume ?? state.voiceSettings.volume,
+      },
+    })),
 }));
