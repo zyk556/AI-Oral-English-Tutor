@@ -24,6 +24,13 @@ interface Evaluation {
   comment: string;
 }
 
+// 语音设置
+interface VoiceSettings {
+  voice: string;
+  speed: number;
+  volume: number;
+}
+
 // 双角色 System Prompt：对话伙伴 + 纠错评委
 function buildSystemPrompt(scenario: string): string {
   const scenarioPrompts: Record<string, string> = {
@@ -61,20 +68,14 @@ You MUST respond with ONLY a valid JSON object (no markdown, no code fences) in 
 }
 
 Rules:
-- "reply" must be ONLY your conversational response, as if you are just a conversation partner.
-- "grammar" array: list each grammar error. If none, use empty array [].
+- "reply" must be ONLY your conversational response, as if you are just a conversation partner. Do NOT include any evaluation or correction in reply.
+- "corrected": You MUST rewrite the user's message with ALL grammar, tense, spelling, and word order errors fixed. This is NOT a copy of the user's message — it is the CORRECTED version. If the user said "I have work on many project last year", corrected must be "I worked on many projects last year". If the user's English is already perfect, just repeat their message as-is.
+- "grammar" array: List EVERY grammar error you found. For each error, show the exact wrong phrase from the user's message and the correct replacement. If there are no errors, use empty array [].
 - "vocabulary" array: suggest 1-2 better word choices. If the user's vocabulary is perfect, use empty array [].
 - "score": each dimension is 1-10. Be honest but encouraging.
 - "comment": be specific and helpful, not generic.
 - If the user's English is perfect, the evaluation should still have scores (high) and a positive comment.
 - IMPORTANT: Output ONLY the JSON object. No extra text before or after.`;
-}
-
-// 语音设置
-interface VoiceSettings {
-  voice: string;
-  speed: number;
-  volume: number;
 }
 
 // 会话状态
@@ -211,7 +212,7 @@ async function generateReplyAndEvaluation(
     body: JSON.stringify({
       model: MIMO_LLM_MODEL,
       messages: [{ role: "system", content: systemPrompt }, ...history],
-      max_tokens: 800,
+      max_tokens: 1200,
       temperature: 0.7,
     }),
   });
@@ -226,11 +227,19 @@ async function generateReplyAndEvaluation(
 
   // 解析 JSON 响应
   try {
-    // 尝试提取 JSON（处理可能的 markdown 代码块包裹）
     let jsonStr = content.trim();
-    if (jsonStr.startsWith("```")) {
-      jsonStr = jsonStr.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
+    // 去掉 markdown 代码块包裹
+    jsonStr = jsonStr.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "");
+    // 提取第一个 { 到最后一个 } 之间的内容
+    const firstBrace = jsonStr.indexOf("{");
+    const lastBrace = jsonStr.lastIndexOf("}");
+    if (firstBrace !== -1 && lastBrace !== -1) {
+      jsonStr = jsonStr.substring(firstBrace, lastBrace + 1);
     }
+    // 修复常见 JSON 问题：尾部逗号
+    jsonStr = jsonStr.replace(/,\s*([}\]])/g, "$1");
+
+    console.log("[LLM] Parsing JSON:", (jsonStr || "").substring(0, 200) + "...");
     const parsed = JSON.parse(jsonStr);
 
     const reply = parsed.reply || "I didn't catch that, could you repeat?";
