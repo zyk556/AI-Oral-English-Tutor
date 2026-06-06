@@ -48,15 +48,11 @@ export const useStore = create<AppState>((set, get) => ({
   scenario: null,
   setScenario: (scenario) => {
     const histories = get().chatHistories;
-    // 切换场景时，加载该场景的历史（新场景则为空数组）
     const msgs = histories[scenario] || [];
-    set({
-      scenario,
-      messages: msgs,
-      chatHistories: histories[scenario]
-        ? histories
-        : { ...histories, [scenario]: [] },
-    });
+    set({ scenario, messages: msgs });
+    if (!histories[scenario]) {
+      set({ chatHistories: { ...histories, [scenario]: [] } });
+    }
   },
 
   chatHistories: {},

@@ -41,11 +41,18 @@ export function useWebSocket() {
           const state = useStore.getState();
           const lastMsg = state.messages[state.messages.length - 1];
           if (lastMsg && lastMsg.role === "ai" && !lastMsg.audioUrl) {
-            useStore.setState((s) => ({
-              messages: s.messages.map((m) =>
+            useStore.setState((s) => {
+              const key = s.scenario;
+              const updatedMessages = s.messages.map((m) =>
                 m.id === lastMsg.id ? { ...m, audioUrl } : m
-              ),
-            }));
+              );
+              return {
+                messages: updatedMessages,
+                chatHistories: key
+                  ? { ...s.chatHistories, [key]: updatedMessages }
+                  : s.chatHistories,
+              };
+            });
           }
         });
         return;
@@ -69,8 +76,8 @@ export function useWebSocket() {
             break;
           case "ai_evaluation":
             // 将评估数据附加到最后一条 AI 消息
-            const state = useStore.getState();
-            const lastAI = [...state.messages]
+            const evalState = useStore.getState();
+            const lastAI = [...evalState.messages]
               .reverse()
               .find((m) => m.role === "ai");
             if (lastAI) {
