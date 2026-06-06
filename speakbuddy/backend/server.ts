@@ -70,11 +70,18 @@ Rules:
 - IMPORTANT: Output ONLY the JSON object. No extra text before or after.`;
 }
 
+// 语音设置
+interface VoiceSettings {
+  voice: string;
+  speed: number;
+  volume: number;
+}
+
 // 会话状态
 interface SessionState {
   scenario: string | null;
-  // 每个场景独立的对话历史
   histories: Record<string, Array<{ role: "user" | "assistant"; content: string }>>;
+  voiceSettings: VoiceSettings;
 }
 
 const app = new Hono();
@@ -87,6 +94,7 @@ app.get(
     const state: SessionState = {
       scenario: null,
       histories: {},
+      voiceSettings: { voice: "Chloe", speed: 1.0, volume: 1.0 },
     };
 
     // 获取当前场景的历史
@@ -107,6 +115,22 @@ app.get(
           const msg = JSON.parse(String(event.data));
 
           switch (msg.type) {
+            case "voice_settings":
+              console.log(`[WS] Voice settings:`, msg.settings);
+              state.voiceSettings = { ...state.voiceSettings, ...msg.settings };
+              ws.send(JSON.stringify({ type: "voice_settings_set", settings: state.voiceSettings }));
+              break;
+
+            case "preview_voice":
+              console.log(`[WS] Preview voice request`);
+              try {
+                const audioBuffer = await generateTTS(msg.text || "Hello! This is a voice preview.", state.voiceSettings);
+                ws.send(audioBuffer);
+              } catch (err) {
+                console.error("[Preview] Error:", err);
+              }
+              break;
+
             case "set_scenario":
               console.log(`[WS] Setting scenario: ${msg.scenario}`);
               state.scenario = msg.scenario;
@@ -145,7 +169,7 @@ app.get(
                 );
 
                 // TTS 用 reply 文本生成语音
-                const audioBuffer = await generateTTS(reply);
+                const audioBuffer = await generateTTS(reply, state.voiceSettings);
                 console.log(`[TTS] Generated audio, ${audioBuffer.length} bytes`);
                 ws.send(audioBuffer);
               } catch (err) {
@@ -238,7 +262,18 @@ async function generateReplyAndEvaluation(
 }
 
 // TTS 语音合成
-async function generateTTS(text: string): Promise<Buffer> {
+async function generateTTS(text: string, voiceSettings?: VoiceSettings): Promise<Buffer> {
+  const voice = voiceSettings?.voice || MIMO_TTS_VOICE;
+  const speed = voiceSettings?.speed || 1.0;
+
+  // 构建 messages：速度控制通过 user 指令实现
+  const messages: Array<{ role: string; content: string }> = [];
+  if (speed !== 1.0) {
+    const speedDesc = speed < 1 ? "Speak slowly and clearly" : speed > 1.2 ? "Speak quickly and briskly" : "Speak at a slightly faster pace";
+    messages.push({ role: "user", content: speedDesc });
+  }
+  messages.push({ role: "assistant", content: text });
+
   const resp = await fetch(`${MIMO_BASE_URL}/chat/completions`, {
     method: "POST",
     headers: {
@@ -247,10 +282,10 @@ async function generateTTS(text: string): Promise<Buffer> {
     },
     body: JSON.stringify({
       model: MIMO_TTS_MODEL,
-      messages: [{ role: "assistant", content: text }],
+      messages,
       audio: {
         format: "wav",
-        voice: MIMO_TTS_VOICE,
+        voice,
       },
     }),
   });
