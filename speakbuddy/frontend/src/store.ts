@@ -41,13 +41,16 @@ let messageCounter = 0;
 export const useStore = create<AppState>((set, get) => ({
   scenario: null,
   setScenario: (scenario) => {
-    set({ scenario });
-    // 切换场景时，如果该场景还没有历史，初始化空数组
-    if (!get().chatHistories[scenario]) {
-      set((state) => ({
-        chatHistories: { ...state.chatHistories, [scenario]: [] },
-      }));
-    }
+    const histories = get().chatHistories;
+    // 切换场景时，加载该场景的历史（新场景则为空数组）
+    const msgs = histories[scenario] || [];
+    set({
+      scenario,
+      messages: msgs,
+      chatHistories: histories[scenario]
+        ? histories
+        : { ...histories, [scenario]: [] },
+    });
   },
 
   chatHistories: {},
