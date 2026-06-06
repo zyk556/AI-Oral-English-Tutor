@@ -8,10 +8,10 @@ export function useWebSocket() {
     setConnected,
     addUserMessage,
     addAIMessage,
+    addEvaluation,
     setScenario: setStoreScenario,
   } = useStore();
 
-  // 建立 WebSocket 连接
   useEffect(() => {
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const wsUrl = `${protocol}//${window.location.host}/ws`;
@@ -62,12 +62,20 @@ export function useWebSocket() {
             setStoreScenario(msg.scenario);
             break;
           case "user_text":
-            console.log("[WebSocket] User text:", msg.text);
             addUserMessage(msg.text);
             break;
           case "ai_text":
-            console.log("[WebSocket] AI text:", msg.text);
             addAIMessage(msg.text);
+            break;
+          case "ai_evaluation":
+            // 将评估数据附加到最后一条 AI 消息
+            const state = useStore.getState();
+            const lastAI = [...state.messages]
+              .reverse()
+              .find((m) => m.role === "ai");
+            if (lastAI) {
+              addEvaluation(lastAI.id, msg.evaluation);
+            }
             break;
           case "error":
             console.error("[WebSocket] Server error:", msg.message);
@@ -84,9 +92,8 @@ export function useWebSocket() {
     return () => {
       ws.close();
     };
-  }, [setConnected, addUserMessage, addAIMessage, setStoreScenario]);
+  }, [setConnected, addUserMessage, addAIMessage, addEvaluation, setStoreScenario]);
 
-  // 发送识别文本给后端
   const sendText = useCallback((text: string) => {
     const ws = wsRef.current;
     if (ws && ws.readyState === WebSocket.OPEN) {
@@ -94,7 +101,6 @@ export function useWebSocket() {
     }
   }, []);
 
-  // 设置场景
   const setScenario = useCallback((scenario: string) => {
     const ws = wsRef.current;
     if (ws && ws.readyState === WebSocket.OPEN) {

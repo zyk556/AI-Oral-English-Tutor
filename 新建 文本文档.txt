@@ -1,58 +1,55 @@
 
-请根据以下详细需求，生成一个完整的全栈 Web 应用项目。要求所有代码可直接运行，使用现代最佳实践，并处理好边缘情况。
+SpeakBuddy — 英语口语练习工具 需求文档（v2）
 
 ---
 
 ## 一、项目概述
 
-SpeakBuddy 是一个浏览器端的英语口语练习工具。用户可以选择对话场景（面试 / 点餐 / 会议），通过按住说话与 AI 进行实时语音对话。系统会提供发音评测、语法纠错和课后总结。
+SpeakBuddy 是一个浏览器端的英语口语练习工具。用户可以选择对话场景（面试 / 点餐 / 会议），通过浏览器语音识别与 AI 进行实时语音对话。系统采用双角色 LLM 架构，一次调用同时生成对话回复和学习评估，提供语法纠错、词汇建议和评分。
 
 ## 二、技术栈
 
 ### 前端
 - React 18 + TypeScript + Vite
 - Tailwind CSS (通过 @tailwindcss/vite 插件)
-- shadcn/ui 组件（使用默认样式，可从 npx shadcn@latest add button 等引入）
 - 状态管理：Zustand
-- 音频采集：Web Audio API + MediaRecorder API（opus 编码，每 200ms 发送 chunk）
-- 语音活动检测：使用 @ricky0123/vad-web 的轻量 VAD（可选，后续集成，本次先做手动按住说话）
+- 语音识别：浏览器 Web Speech API（免费，Chrome/Edge 支持）
 - WebSocket 通信：原生 WebSocket
 
 ### 后端
-- 运行时：Node.js (使用 Bun 或 Node，推荐 Bun)
-- 框架：Hono，集成 WebSocket 支持 (@hono/node-server 和 createNodeWebSocket)
-- API 集成：
-  - Deepgram 实时流式语音识别（@deepgram/sdk，使用 `listen.live`）
-  - OpenAI GPT-4o-mini 进行对话生成和语法纠错（openai 官方 SDK）
-  - OpenAI TTS（tts-1 模型）生成语音回复，返回 mp3 二进制
-- 暂时不集成数据库，对话历史保存在内存中即可。
+- 运行时：Node.js + tsx
+- 框架：Hono，集成 WebSocket 支持 (@hono/node-server 和 @hono/node-ws)
+- API 集成：小米 MiMo 开放平台（https://platform.xiaomimimo.com）
+  - LLM 对话：mimo-v2-flash（一次调用，同时返回对话回复 + 学习评估 JSON）
+  - TTS 语音合成：mimo-v2.5-tts（voice: Chloe，输出 wav）
+- 对话历史保存在内存中
 
 ## 三、文件结构
 
-请生成以下文件结构，并确保所有文件内容完整：
 speakbuddy/
 ├── backend/
-│ ├── server.ts # 后端 WebSocket 服务入口
-│ ├── .env # 环境变量示例
-│ └── package.json # 依赖配置 (已给出)
+│   ├── server.ts              # 后端 WebSocket 服务入口
+│   ├── .env                   # MIMO_API_KEY
+│   ├── package.json
+│   └── tsconfig.json
 ├── frontend/
-│ ├── vite.config.ts
-│ ├── index.html
-│ ├── src/
-│ │ ├── main.tsx
-│ │ ├── App.tsx # 主界面（场景选择 + 对话区）
-│ │ ├── store.ts # Zustand 全局状态
-│ │ ├── hooks/
-│ │ │ └── useWebSocket.ts # WebSocket 连接与消息处理
-│ │ ├── components/
-│ │ │ ├── ScenarioSelector.tsx # 场景选择按钮组
-│ │ │ ├── ChatBubble.tsx # 聊天气泡（区分用户/AI，显示文字）
-│ │ │ └── RecordButton.tsx # 按住录音按钮，发送音频
-│ │ └── index.css # Tailwind 导入
-│ └── package.json # 依赖配置 (已给出)
+│   ├── vite.config.ts         # Vite + Tailwind + WebSocket 代理
+│   ├── index.html
+│   ├── tsconfig.json
+│   ├── package.json
+│   └── src/
+│       ├── main.tsx
+│       ├── index.css          # Tailwind 导入
+│       ├── App.tsx            # 主界面：场景选择 + 对话区 + 语音按钮
+│       ├── store.ts           # Zustand 全局状态（含 Evaluation 类型）
+│       ├── hooks/
+│       │   ├── useWebSocket.ts          # WebSocket 连接与消息处理
+│       │   └── useSpeechRecognition.ts  # 浏览器语音识别封装
+│       └── components/
+│           ├── ScenarioSelector.tsx  # 场景选择按钮组
+│           ├── ChatBubble.tsx        # 聊天气泡 + 纠错卡片集成
+│           └── CorrectionCard.tsx    # 折叠式纠错评分卡片
 └── README.md
-
-text
 
 ## 四、核心功能与实现细节
 
@@ -61,97 +58,72 @@ text
 - 点击场景按钮时，通过 WebSocket 发送 `{ type: 'set_scenario', scenario: '...' }`。
 - 后端收到后更新对话角色提示词，并清空历史。
 
-### 4.2 实时语音对话流程
-1. 用户按住 RecordButton 开始录音，使用 MediaRecorder（mimeType: 'audio/webm;codecs=opus'），每 200ms 触发 ondataavailable，将 Blob 转为 ArrayBuffer 后通过 WebSocket 发送。
-2. 后端收到二进制音频数据，直接喂给 Deepgram Live 连接。
-3. Deepgram 返回最终识别文本后，后端执行以下操作（并行）：
-   - 调用 OpenAI GPT-4o-mini 生成对话回复（使用对应的场景 system prompt）。
-   - 将用户文本和 AI 回复文本通过 WebSocket JSON 消息发送给前端。
-   - 调用 OpenAI TTS 生成语音，将音频二进制数据直接发送给前端。
-4. 前端接收到用户文本和 AI 文本后，添加消息到聊天列表；接收到音频数据时，为最近一条 AI 消息创建播放 URL。
+### 4.2 语音对话流程
+1. 用户点击麦克风按钮，调用浏览器 Web Speech API（webkitSpeechRecognition）开始录音。
+2. 再次点击停止录音，浏览器返回识别文本。
+3. 前端通过 WebSocket 发送 `{ type: 'user_speech', text: '...' }` 给后端。
+4. 后端调用 MiMo LLM，一次请求同时返回对话回复和评估数据（JSON 格式）。
+5. 后端发送三条消息给前端：
+   - `{ type: 'user_text', text: '...' }` — 用户识别文本
+   - `{ type: 'ai_text', text: '...' }` — AI 对话回复
+   - `{ type: 'ai_evaluation', evaluation: { ... } }` — 评估数据
+   - 二进制：TTS 语音音频 (wav)
 
-### 4.3 后端场景 System Prompt
-你需要根据场景参数设定 system prompt。以下是三个场景的完整 prompt（请原样使用）：
-- **interview**: `You are an experienced HR interviewer at a tech company. You are interviewing a candidate for a software engineer position. Guidelines: - Ask behavioral and technical questions naturally. - React to the candidate's responses with follow-up questions. - Keep the tone professional but friendly. - Limit each response to 2-3 sentences to keep the conversation moving.`
-- **ordering**: `You are a friendly waiter at a nice restaurant. Take the customer's order, suggest dishes based on their preferences, and handle any special requests. Use casual, polite English. Keep responses short and natural.`
-- **meeting**: `You are a project manager leading a daily standup meeting. Ask each team member (the user) about their progress, any blockers, and plans for the day. Be encouraging and efficient. Keep the tone professional but supportive.`
+### 4.3 双角色 LLM 设计
+核心设计：一个模型同时驱动对话和评估，减少 API 调用链路。
+
+System Prompt 要求模型返回 JSON：
+{
+  "reply": "对话回复（2-3句，自然的场景对话）",
+  "evaluation": {
+    "corrected": "用户原话的语法纠正版本",
+    "grammar": [
+      { "original": "错误片段", "corrected": "正确写法", "explanation": "语法规则说明" }
+    ],
+    "vocabulary": [
+      { "suggestion": "更好的用词", "context": "为什么更好，附例句" }
+    ],
+    "score": { "fluency": 7, "grammar": 6, "vocabulary": 7, "overall": 7 },
+    "comment": "一句具体的鼓励和建议"
+  }
+}
+
+纠错时机：延迟纠错 — 评估数据以折叠卡片形式展示，用户自行点击展开查看，不打断对话流。
 
 ### 4.4 WebSocket 消息协议
-所有文本消息均为 JSON 格式，二进制消息为音频数据。
-
 **前端 → 后端：**
 - 设置场景：`{ "type": "set_scenario", "scenario": "interview" }`
-- 音频二进制数据（直接发送）
+- 语音文本：`{ "type": "user_speech", "text": "..." }`
 
 **后端 → 前端：**
 - 连接就绪：`{ "type": "ready", "message": "Connected" }`
-- 用户识别文本：`{ "type": "user_text", "text": "..." }`
-- AI 回复文本：`{ "type": "ai_text", "text": "..." }`
-- 场景已设置：`{ "type": "scenario_set", "scenario": "interview" }`
-- 二进制：AI 语音回复 (mp3)
+- 用户文本：`{ "type": "user_text", "text": "..." }`
+- AI 回复：`{ "type": "ai_text", "text": "..." }`
+- AI 评估：`{ "type": "ai_evaluation", evaluation: { ... } }`
+- 场景已设置：`{ "type": "scenario_set", "scenario": "..." }`
+- 二进制：AI 语音回复 (wav)
 
 ### 4.5 前端组件行为
-- **App.tsx**：顶部是 ScenarioSelector，中间是聊天消息列表（自动滚动到底部），底部是 RecordButton。
-- **ChatBubble.tsx**：接收 role 和 text，用户消息靠右蓝色，AI 消息靠左灰色。如果该消息有 audioUrl，显示一个播放按钮。
-- **RecordButton.tsx**：用 onMouseDown/onMouseUp 控制录音，按下时红色缩放动画，显示“●”图标。
-- **useWebSocket.ts**：管理 ws 连接，提供 sendAudio 和 setScenario 方法，处理 onmessage 分发。
+- **App.tsx**：顶部 ScenarioSelector，中间聊天列表（自动滚动），底部麦克风按钮（点击切换录音）。
+- **ChatBubble.tsx**：用户消息靠右蓝色，AI 消息靠左灰色。AI 消息下方集成 CorrectionCard。
+- **CorrectionCard.tsx**：折叠状态显示评分摘要（颜色标识高/中/低分），点击展开显示：评分四维（流畅度/语法/词汇/综合）、纠正版本、语法纠错列表、词汇建议、总评。
+- **useSpeechRecognition.ts**：封装浏览器 Web Speech API，配置 en-US，单次识别。
 
-### 4.6 关键点
-- 后端使用 Deepgram 时，需确保传入的正确音频格式。因为 MediaRecorder 输出 webm opus，Deepgram 可以直接识别（可能需要指定编码参数，如果不行，可先不设置，让 Deepgram 自动检测）。
-- OpenAI TTS 使用 `tts-1` 模型，语音 `alloy`，输出格式为 mp3。
-- 所有 API 密钥放在后端 .env 文件中，前端不可见。
-- 项目必须能分别在 backend 和 frontend 目录下执行 `bun install` 和 `bun run dev`（或 npm）后正常运行。
-- 请在代码中处理基本异常，如网络断开、API 错误等，控制台输出错误即可。
+### 4.6 环境变量
+MIMO_API_KEY=你的小米MiMo API Key
 
-## 五、环境变量 (.env)
-DEEPGRAM_API_KEY=your_deepgram_api_key
-OPENAI_API_KEY=your_openai_api_key
+### 4.7 启动方式
+# 后端
+cd backend && npm install && npm run dev
 
-text
+# 前端
+cd frontend && npm install && npm run dev
 
-## 六、package.json 依赖速查
+# 打开 http://localhost:5173
 
-**backend/package.json**:
-```json
-{
-  "name": "speakbuddy-backend",
-  "dependencies": {
-    "hono": "^4",
-    "@hono/node-server": "^1",
-    "ws": "^8",
-    "@deepgram/sdk": "^3",
-    "openai": "^4"
-  }
-}
-frontend/package.json:
-
-json
-{
-  "name": "speakbuddy-frontend",
-  "dependencies": {
-    "react": "^18",
-    "react-dom": "^18",
-    "zustand": "^5",
-    "react-icons": "^5"
-  },
-  "devDependencies": {
-    "@vitejs/plugin-react": "^4",
-    "@tailwindcss/vite": "^4",
-    "tailwindcss": "^4",
-    "typescript": "^5"
-  }
-}
-七、生成要求
-请严格按照上述要求，生成所有文件的完整代码。代码应当：
-
-在 TypeScript 下类型安全
-
-遵循 React 函数组件和 Hooks 范式
-
-样式使用 Tailwind CSS 类名
-
-后端代码具有清晰的注释
-
-所有文件可以直接复制到对应目录并运行
-
-请开始生成整个项目。
+### 4.8 关键设计决策
+- 语音识别使用浏览器内置 Web Speech API，免费无需额外 API。
+- LLM 使用小米 MiMo 平台，一个 API Key 驱动对话 + TTS。
+- 双角色 prompt：对话伙伴（自然回复）+ 隐形评委（JSON 评估），一次调用完成。
+- 纠错时机为延迟纠错：评估以折叠卡片展示，不打断对话流。
+- 对话历史中只存储 reply 文本，不含评估数据。
