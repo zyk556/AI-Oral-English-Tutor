@@ -1,24 +1,34 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useStore } from "./store";
 import { useWebSocket } from "./hooks/useWebSocket";
+import { useSpeechRecognition } from "./hooks/useSpeechRecognition";
 import ScenarioSelector from "./components/ScenarioSelector";
 import ChatBubble from "./components/ChatBubble";
-import RecordButton from "./components/RecordButton";
-import { FaComments } from "react-icons/fa";
+import { FaComments, FaMicrophone, FaSpinner } from "react-icons/fa";
 
 export default function App() {
   const { scenario, messages, connected } = useStore();
-  const { sendAudio, stopRecording, setScenario } = useWebSocket();
+  const { sendText, setScenario } = useWebSocket();
+  const { startListening, stopListening, isListening } = useSpeechRecognition();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [playingId, setPlayingId] = useState<string | null>(null);
+  const [processing, setProcessing] = useState(false);
 
-  // 自动滚动到底部
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // 播放/停止音频
+  // 监听后端回复，收到后取消 processing 状态
+  useEffect(() => {
+    if (processing && messages.length > 0) {
+      const last = messages[messages.length - 1];
+      if (last.role === "ai") {
+        setProcessing(false);
+      }
+    }
+  }, [messages, processing]);
+
   const handlePlayAudio = (messageId: string, audioUrl: string) => {
     if (audioRef.current && playingId === messageId) {
       audioRef.current.pause();
@@ -26,35 +36,37 @@ export default function App() {
       setPlayingId(null);
       return;
     }
-
-    if (audioRef.current) {
-      audioRef.current.pause();
-    }
+    if (audioRef.current) audioRef.current.pause();
 
     const audio = new Audio(audioUrl);
     audioRef.current = audio;
     setPlayingId(messageId);
-
     audio.onended = () => {
       setPlayingId(null);
       audioRef.current = null;
     };
+    audio.play().catch(console.error);
+  };
 
-    audio.onerror = () => {
-      console.error("[Audio] Playback error");
-      setPlayingId(null);
-      audioRef.current = null;
-    };
-
-    audio.play().catch((err) => {
-      console.error("[Audio] Play failed:", err);
-      setPlayingId(null);
+  // 按住说话
+  const handleMouseDown = () => {
+    if (!scenario || !connected || processing) return;
+    startListening((text: string) => {
+      if (text.trim()) {
+        sendText(text);
+        setProcessing(true);
+      }
     });
   };
 
+  const handleMouseUp = () => {
+    stopListening();
+  };
+
+  const disabled = !scenario || !connected || processing;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col">
-      {/* 顶部标题栏 */}
       <header className="bg-white/80 backdrop-blur-sm shadow-sm px-4 py-3">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -75,12 +87,10 @@ export default function App() {
       </header>
 
       <main className="flex-1 flex flex-col max-w-2xl mx-auto w-full px-4 py-4">
-        {/* 场景选择 */}
         <div className="mb-4">
           <ScenarioSelector onSelect={setScenario} currentScenario={scenario} />
         </div>
 
-        {/* 聊天消息列表 */}
         <div className="flex-1 overflow-y-auto bg-white/60 backdrop-blur-sm rounded-2xl p-4 mb-4 shadow-inner min-h-[300px]">
           {!scenario && (
             <div className="flex flex-col items-center justify-center h-full text-gray-400">
@@ -107,12 +117,41 @@ export default function App() {
         </div>
 
         {/* 录音按钮 */}
-        <div className="flex justify-center py-2">
-          <RecordButton
-            onAudioData={sendAudio}
-            onStopRecording={stopRecording}
-            disabled={!scenario || !connected}
-          />
+        <div className="flex flex-col items-center gap-2 py-2">
+          <button
+            onMouseDown={handleMouseDown}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={() => {
+              if (isListening) stopListening();
+            }}
+            onTouchStart={handleMouseDown}
+            onTouchEnd={handleMouseUp}
+            disabled={disabled}
+            className={`w-16 h-16 rounded-full flex items-center justify-center text-white text-xl shadow-lg transition-all duration-200 select-none ${
+              isListening
+                ? "bg-red-500 scale-110 animate-pulse shadow-red-300"
+                : processing
+                ? "bg-yellow-500 cursor-wait"
+                : disabled
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-blue-500 hover:bg-blue-600 hover:scale-105 active:scale-95"
+            }`}
+          >
+            {processing ? (
+              <FaSpinner className="animate-spin" size={22} />
+            ) : (
+              <FaMicrophone size={22} />
+            )}
+          </button>
+          <p className="text-xs text-gray-500 select-none">
+            {!scenario
+              ? "Select a scenario first"
+              : isListening
+              ? "Listening... release to stop"
+              : processing
+              ? "AI is thinking..."
+              : "Hold to speak"}
+          </p>
         </div>
       </main>
     </div>
