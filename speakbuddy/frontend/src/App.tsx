@@ -48,19 +48,19 @@ export default function App() {
     audio.play().catch(console.error);
   };
 
-  // 按住说话
-  const handleMouseDown = () => {
+  // 点击切换录音
+  const handleToggleRecording = () => {
     if (!scenario || !connected || processing) return;
-    startListening((text: string) => {
-      if (text.trim()) {
-        sendText(text);
-        setProcessing(true);
-      }
-    });
-  };
-
-  const handleMouseUp = () => {
-    stopListening();
+    if (isListening) {
+      stopListening();
+    } else {
+      startListening((text: string) => {
+        if (text.trim()) {
+          sendText(text);
+          setProcessing(true);
+        }
+      });
+    }
   };
 
   const disabled = !scenario || !connected || processing;
@@ -119,13 +119,7 @@ export default function App() {
         {/* 录音按钮 */}
         <div className="flex flex-col items-center gap-2 py-2">
           <button
-            onMouseDown={handleMouseDown}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={() => {
-              if (isListening) stopListening();
-            }}
-            onTouchStart={handleMouseDown}
-            onTouchEnd={handleMouseUp}
+            onClick={handleToggleRecording}
             disabled={disabled}
             className={`w-16 h-16 rounded-full flex items-center justify-center text-white text-xl shadow-lg transition-all duration-200 select-none ${
               isListening
@@ -147,10 +141,10 @@ export default function App() {
             {!scenario
               ? "Select a scenario first"
               : isListening
-              ? "Listening... release to stop"
+              ? "Click to stop"
               : processing
               ? "AI is thinking..."
-              : "Hold to speak"}
+              : "Click to speak"}
           </p>
         </div>
       </main>
