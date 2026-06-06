@@ -38,7 +38,6 @@ export function useWebSocket() {
         event.data.arrayBuffer().then((buffer) => {
           const blob = new Blob([buffer], { type: "audio/wav" });
           const audioUrl = URL.createObjectURL(blob);
-          // 为最后一条 AI 消息附加音频 URL
           const state = useStore.getState();
           const lastMsg = state.messages[state.messages.length - 1];
           if (lastMsg && lastMsg.role === "ai" && !lastMsg.audioUrl) {
@@ -52,7 +51,6 @@ export function useWebSocket() {
         return;
       }
 
-      // 文本消息 = JSON
       try {
         const msg = JSON.parse(event.data);
         switch (msg.type) {
@@ -71,6 +69,10 @@ export function useWebSocket() {
             console.log("[WebSocket] AI text:", msg.text);
             addAIMessage(msg.text);
             break;
+          case "error":
+            console.error("[WebSocket] Server error:", msg.message);
+            addAIMessage("Sorry, something went wrong. Please try again.");
+            break;
           default:
             console.warn("[WebSocket] Unknown message type:", msg.type);
         }
@@ -84,19 +86,11 @@ export function useWebSocket() {
     };
   }, [setConnected, addUserMessage, addAIMessage, setStoreScenario]);
 
-  // 发送音频数据块
-  const sendAudio = useCallback((data: ArrayBuffer) => {
+  // 发送识别文本给后端
+  const sendText = useCallback((text: string) => {
     const ws = wsRef.current;
     if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(data);
-    }
-  }, []);
-
-  // 通知后端录音结束
-  const stopRecording = useCallback(() => {
-    const ws = wsRef.current;
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({ type: "stop_recording" }));
+      ws.send(JSON.stringify({ type: "user_speech", text }));
     }
   }, []);
 
@@ -109,5 +103,5 @@ export function useWebSocket() {
     useStore.getState().clearMessages();
   }, []);
 
-  return { sendAudio, stopRecording, setScenario };
+  return { sendText, setScenario };
 }
