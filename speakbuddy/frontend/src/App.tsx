@@ -13,13 +13,20 @@ export default function App() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [processing, setProcessing] = useState(false);
+  const prevScenarioRef = useRef<string | null>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   // 监听后端回复，收到后取消 processing 状态 + 自动播放语音
+  // 切换场景时不自动播放
   useEffect(() => {
+    const scenarioChanged = prevScenarioRef.current !== scenario;
+    prevScenarioRef.current = scenario;
+
+    if (scenarioChanged) return; // 切场景，跳过自动播放
+
     if (messages.length > 0) {
       const last = messages[messages.length - 1];
       if (last.role === "ai") {
@@ -29,7 +36,7 @@ export default function App() {
         }
       }
     }
-  }, [messages]);
+  }, [messages, scenario]);
 
   // 播放音频
   const playAudio = (messageId: string, audioUrl: string) => {
