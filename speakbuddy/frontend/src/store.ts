@@ -57,6 +57,7 @@ function getRandomContext(scenario: string): string {
 interface AppState {
   scenario: string | null;
   scenarioContext: string;
+  scenarioContexts: { [key: string]: string | undefined };
   setScenario: (scenario: string) => void;
   refreshContext: () => void;
 
@@ -91,17 +92,33 @@ let messageCounter = 0;
 export const useStore = create<AppState>((set, get) => ({
   scenario: null,
   scenarioContext: "",
+  scenarioContexts: {},
   setScenario: (scenario) => {
-    const histories = get().chatHistories;
+    const state = get();
+    const histories = state.chatHistories;
     const msgs = histories[scenario] || [];
-    set({ scenario, messages: msgs, scenarioContext: getRandomContext(scenario) });
+    // 保留已有语境，首次才随机
+    const existing: string | undefined = state.scenarioContexts[scenario];
+    const ctx = existing ?? getRandomContext(scenario);
+    set({
+      scenario,
+      messages: msgs,
+      scenarioContext: ctx,
+      scenarioContexts: { ...state.scenarioContexts, [scenario]: ctx },
+    });
     if (!histories[scenario]) {
       set({ chatHistories: { ...histories, [scenario]: [] } });
     }
   },
   refreshContext: () => {
     const s = get().scenario;
-    if (s) set({ scenarioContext: getRandomContext(s) });
+    if (s) {
+      const ctx = getRandomContext(s);
+      set({
+        scenarioContext: ctx,
+        scenarioContexts: { ...get().scenarioContexts, [s]: ctx },
+      });
+    }
   },
 
   chatHistories: {},
