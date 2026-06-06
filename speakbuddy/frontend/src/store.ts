@@ -40,6 +40,10 @@ interface AppState {
 
   connected: boolean;
   setConnected: (connected: boolean) => void;
+
+  // 纯听模式
+  listenMode: boolean;
+  setListenMode: (v: boolean) => void;
 }
 
 let messageCounter = 0;
@@ -114,4 +118,7 @@ export const useStore = create<AppState>((set, get) => ({
 
   connected: false as boolean,
   setConnected: (connected) => set({ connected }),
+
+  listenMode: false as boolean,
+  setListenMode: (v) => set({ listenMode: v }),
 }));

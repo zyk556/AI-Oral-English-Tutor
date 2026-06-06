@@ -4,10 +4,10 @@ import { useWebSocket } from "./hooks/useWebSocket";
 import { useSpeechRecognition } from "./hooks/useSpeechRecognition";
 import ScenarioSelector from "./components/ScenarioSelector";
 import ChatBubble from "./components/ChatBubble";
-import { FaComments, FaMicrophone, FaSpinner } from "react-icons/fa";
+import { FaComments, FaMicrophone, FaSpinner, FaHeadphones, FaComment } from "react-icons/fa";
 
 export default function App() {
-  const { scenario, messages, connected, playingId, pausedId, setPlayingId, setPausedId } = useStore();
+  const { scenario, messages, connected, playingId, pausedId, setPlayingId, setPausedId, listenMode, setListenMode } = useStore();
   const { sendText, setScenario } = useWebSocket();
   const { startListening, stopListening, isListening } = useSpeechRecognition();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -104,6 +104,18 @@ export default function App() {
             <h1 className="text-xl font-bold text-gray-800">SpeakBuddy</h1>
           </div>
           <div className="flex items-center gap-2">
+            {/* 纯听模式切换 */}
+            <button
+              onClick={() => setListenMode(!listenMode)}
+              className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium transition-colors ${
+                listenMode
+                  ? "bg-purple-100 text-purple-600"
+                  : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+              }`}
+            >
+              {listenMode ? <FaComment size={12} /> : <FaHeadphones size={12} />}
+              {listenMode ? "Show Text" : "Listen Only"}
+            </button>
             <span
               className={`w-2 h-2 rounded-full ${
                 connected ? "bg-green-500" : "bg-red-500"
@@ -141,6 +153,7 @@ export default function App() {
               message={msg}
               isPlaying={playingId === msg.id}
               isPaused={pausedId === msg.id}
+              listenMode={listenMode}
               onPause={() => handlePause(msg.id)}
               onResume={() => handleResume(msg.id)}
               onReplay={() => handleReplay(msg.id, msg.audioUrl!)}
