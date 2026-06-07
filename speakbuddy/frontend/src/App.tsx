@@ -6,7 +6,7 @@ import ScenarioSelector from "./components/ScenarioSelector";
 import ChatBubble from "./components/ChatBubble";
 import VoiceSettings from "./components/VoiceSettings";
 import EvaluationPanel from "./components/EvaluationPanel";
-import { FaHeadphones, FaComment, FaMicrophone, FaSpinner, FaGlobe, FaRedo } from "react-icons/fa";
+import { FaHeadphones, FaComment, FaMicrophone, FaSpinner, FaRedo } from "react-icons/fa";
 
 export default function App() {
   const {
@@ -146,11 +146,6 @@ export default function App() {
             </button>
           </div>
 
-          {/* 语言 */}
-          <div className="flex items-center gap-1 text-xs" style={{ color: "var(--color-text-secondary)" }}>
-            <FaGlobe size={11} /> EN
-          </div>
-
           {/* 连接状态 */}
           <div className="flex items-center gap-1.5">
             <div
@@ -182,7 +177,15 @@ export default function App() {
             >
               <div className="flex-1">
                 <div className="text-[15px] font-semibold" style={{ color: "var(--color-text)" }}>
-                  {scenario === "interview" ? "💼 Interview" : scenario === "ordering" ? "🍽️ Restaurant" : "👥 Meeting"}
+                  {scenario === "interview" ? "💼 Interview"
+                    : scenario === "ordering" ? "🍽️ Restaurant"
+                    : scenario === "meeting" ? "👥 Meeting"
+                    : scenario === "directions" ? "🗺️ Directions"
+                    : scenario === "doctor" ? "🏥 Doctor"
+                    : scenario === "airport" ? "✈️ Airport"
+                    : scenario === "hotel" ? "🏨 Hotel"
+                    : scenario === "dating" ? "💕 Dating"
+                    : scenario}
                 </div>
                 <div className="text-[13px] mt-2 leading-relaxed" style={{ color: "var(--color-text-secondary)" }}>
                   {scenarioContext}

@@ -47,6 +47,46 @@ const CONTEXTS: Record<string, string[]> = {
     "You're in a cross-team sync meeting. Another team needs your API endpoint changes by end of week.",
     "You're in an incident review meeting. A production bug caused downtime yesterday and you need to explain what happened.",
   ],
+  directions: [
+    "You're lost near Times Square in New York. You need to find the nearest subway station to get to Central Park.",
+    "You're in London trying to find the British Museum. You stop a passerby on the street for directions.",
+    "You're in Tokyo looking for a specific ramen restaurant in Shibuya. The streets are confusing and you need help.",
+    "You're in Paris trying to find the Eiffel Tower from your hotel. You ask a local for walking directions.",
+    "You're at a university campus trying to find the library. You ask another student for help.",
+    "You're in an unfamiliar neighborhood looking for a pharmacy. You ask someone at a bus stop.",
+  ],
+  doctor: [
+    "You've had a bad headache and fever for two days. You're visiting the doctor for the first time.",
+    "You hurt your ankle while jogging. You're at the clinic describing what happened.",
+    "You've been having trouble sleeping for a week. You're consulting a doctor about it.",
+    "You have a sore throat and cough. You're at the doctor's office before an important presentation tomorrow.",
+    "You've been feeling dizzy and tired lately. You're visiting the doctor for a general check-up.",
+    "You have an allergic reaction to something you ate. You're describing your symptoms to the doctor.",
+  ],
+  airport: [
+    "You're at the check-in counter for a flight to Tokyo. You want to request a window seat and check your luggage.",
+    "Your flight is delayed and you're asking the airline staff about the new departure time and gate.",
+    "You're going through security and the officer asks you about items in your bag.",
+    "You're at the boarding gate and want to ask about upgrading to business class.",
+    "You just arrived and can't find your luggage at baggage claim. You're asking staff for help.",
+    "You missed your connecting flight and need to rebook at the airline service desk.",
+  ],
+  hotel: [
+    "You're checking into a luxury hotel for a vacation. You want a room with a nice view.",
+    "You're at the hotel reception reporting that the air conditioning in your room isn't working.",
+    "You're checking in late at night after a long flight. You want to know about breakfast times.",
+    "You want to extend your stay by one more night. You're asking the front desk about availability.",
+    "You're asking the concierge for restaurant recommendations near the hotel.",
+    "You're checking out and want to ask about storing your luggage for a few hours before your flight.",
+  ],
+  dating: [
+    "You're on a first date at a cozy cafe. You're nervous but excited. Ask about their hobbies and interests.",
+    "You're meeting someone from a dating app for the first time. You're at a wine bar getting to know each other.",
+    "You're on a third date at a park. The conversation is getting deeper — you talk about dreams and future plans.",
+    "You're having coffee with someone you like. You're trying to be charming and funny.",
+    "You're on a dinner date. You're talking about travel experiences and favorite foods.",
+    "You're texting your crush to ask them out. Practice what you'd say in person.",
+  ],
 };
 
 function getRandomContext(scenario: string): string {
