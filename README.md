@@ -4,6 +4,10 @@
 
 ### 🔗 [体验：ai-oral-english-tutor-production.up.railway.app](https://ai-oral-english-tutor-production.up.railway.app)
 
+### 🎬 Demo 视频链接
+- [哔哩哔哩](https://www.bilibili.com/video/BV1rjEh6qEjD/?vd_source=686c6175dd8a22dcc828d6452f09e2b3)
+- [夸克网盘](https://pan.quark.cn/s/07c240927951?pwd=MTdU)
+
 ---
 
 ## ✨ 功能一览
