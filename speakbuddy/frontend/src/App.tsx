@@ -6,7 +6,7 @@ import ScenarioSelector from "./components/ScenarioSelector";
 import ChatBubble from "./components/ChatBubble";
 import VoiceSettings from "./components/VoiceSettings";
 import EvaluationPanel from "./components/EvaluationPanel";
-import { FaHeadphones, FaComment, FaMicrophone, FaSpinner, FaGlobe, FaRedo } from "react-icons/fa";
+import { FaHeadphones, FaComment, FaMicrophone, FaSpinner, FaRedo } from "react-icons/fa";
 
 export default function App() {
   const {
@@ -144,11 +144,6 @@ export default function App() {
             >
               <FaHeadphones size={10} /> Listen
             </button>
-          </div>
-
-          {/* 语言 */}
-          <div className="flex items-center gap-1 text-xs" style={{ color: "var(--color-text-secondary)" }}>
-            <FaGlobe size={11} /> EN
           </div>
 
           {/* 连接状态 */}

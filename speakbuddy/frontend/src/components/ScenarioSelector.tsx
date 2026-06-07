@@ -21,7 +21,7 @@ export default function ScenarioSelector({
   currentContext,
 }: ScenarioSelectorProps) {
   return (
-    <aside className="w-[280px] flex-shrink-0 py-4 pl-4 space-y-2 overflow-y-auto hidden md:block">
+    <aside className="w-[290px] flex-shrink-0 py-4 pl-4 space-y-2.5 overflow-y-auto hidden md:block">
       <div
         className="text-xs font-semibold px-2 mb-2"
         style={{ color: "var(--color-text-secondary)" }}
@@ -34,7 +34,7 @@ export default function ScenarioSelector({
           <button
             key={s.id}
             onClick={() => onSelect(s.id)}
-            className="w-full flex items-center gap-3 p-3.5 rounded-2xl text-left transition-all duration-200 relative overflow-hidden"
+            className="w-full flex items-center gap-3 p-4 rounded-2xl text-left transition-all duration-200 relative overflow-hidden"
             style={{
               background: isActive ? "rgba(91,108,255,0.08)" : "white",
               border: isActive
@@ -51,15 +51,15 @@ export default function ScenarioSelector({
                 style={{ background: "linear-gradient(180deg, #5B6CFF, #7B61FF)" }}
               />
             )}
-            <div className="text-xl">{s.icon}</div>
+            <div className="text-2xl">{s.icon}</div>
             <div className="min-w-0">
               <div
-                className="text-[13px] font-medium"
+                className="text-[14px] font-medium"
                 style={{ color: isActive ? "var(--color-primary)" : "var(--color-text)" }}
               >
                 {s.label}
               </div>
-              <div className="text-[11px] leading-snug truncate" style={{ color: "var(--color-text-secondary)" }}>
+              <div className="text-[12px] leading-snug truncate" style={{ color: "var(--color-text-secondary)" }}>
                 {isActive && currentContext ? currentContext : s.subtitle}
               </div>
               {isActive && currentContext && (
