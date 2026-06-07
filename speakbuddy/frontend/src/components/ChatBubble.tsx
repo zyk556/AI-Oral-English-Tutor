@@ -39,7 +39,7 @@ export default function ChatBubble({
         </div>
         <div className="max-w-[75%] flex flex-col">
           <div
-            className="px-5 py-3 rounded-3xl rounded-tl-lg flex items-center gap-1.5"
+            className="px-6 py-4 rounded-3xl rounded-tl-lg flex items-center gap-2"
             style={{ background: "white", boxShadow: "0 1px 2px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.04)" }}
           >
             <span className="w-2 h-2 rounded-full animate-bounce" style={{ background: "var(--color-text-secondary)", animationDelay: "0ms" }} />
@@ -111,7 +111,7 @@ export default function ChatBubble({
 
       <div className={`max-w-[75%] ${isUser ? "items-end" : "items-start"} flex flex-col`}>
         <div
-          className="px-5 py-3 text-sm leading-relaxed"
+          className="px-6 py-4 text-[15px] leading-relaxed"
           style={{
             borderRadius: isUser ? "24px 24px 8px 24px" : "24px 24px 24px 8px",
             background: isUser

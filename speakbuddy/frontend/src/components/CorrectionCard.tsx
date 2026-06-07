@@ -19,7 +19,7 @@ export default function CorrectionCard({ evaluation }: CorrectionCardProps) {
       {/* 折叠态 */}
       <button
         onClick={() => setExpanded(!expanded)}
-        className="flex items-center gap-3 px-4 py-2.5 rounded-2xl transition-all duration-200"
+        className="flex items-center gap-3 px-5 py-3 rounded-2xl transition-all duration-200"
         style={{
           background: "white",
           boxShadow: "0 1px 2px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.04)",
@@ -50,7 +50,7 @@ export default function CorrectionCard({ evaluation }: CorrectionCardProps) {
       {/* 展开态 */}
       {expanded && (
         <div
-          className="mt-2 p-4 rounded-3xl space-y-4"
+          className="mt-2 p-5 rounded-3xl space-y-5"
           style={{
             background: "white",
             boxShadow: "0 1px 2px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06)",
