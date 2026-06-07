@@ -69,32 +69,37 @@ export default function VoiceSettings(props: VoiceSettingsProps) {
         Voice
       </div>
 
-      {/* 音色 - 横排小卡片 */}
-      <div className="flex gap-2">
-        {VOICES.map((v) => {
-          const isActive = voice === v.id;
-          return (
-            <button
-              key={v.id}
-              onClick={() => onChange({ voice: v.id })}
-              className="flex-1 flex flex-col items-center gap-1 py-2 rounded-xl transition-all duration-200"
-              style={{
-                background: isActive ? "rgba(91,108,255,0.08)" : "var(--color-bg)",
-                border: isActive ? "1.5px solid var(--color-primary)" : "1.5px solid transparent",
-              }}
+      {/* 音色 - 按性别分组 */}
+      <div className="space-y-2">
+        {([["F", "Female"], ["M", "Male"]] as const).map(([gKey, gLabel]) => (
+          <div key={gKey}>
+            <div className="text-[10px] font-medium mb-1.5 px-1" style={{ color: "var(--color-text-secondary)" }}>
+              {gLabel}
+            </div>
+            <div
+              className="flex gap-2 p-2 rounded-xl"
+              style={{ background: gKey === "F" ? "rgba(255,107,157,0.04)" : "rgba(91,108,255,0.04)" }}
             >
-              <div
-                className="w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-bold"
-                style={{ background: isActive ? "linear-gradient(135deg, #5B6CFF, #7B61FF)" : "#C7C7CC" }}
-              >
-                {v.label[0]}
-              </div>
-              <div className="text-[10px] font-medium" style={{ color: isActive ? "var(--color-primary)" : "var(--color-text-secondary)" }}>
-                {v.label}
-              </div>
-            </button>
-          );
-        })}
+              {VOICES.filter((v) => v.gender === gKey).map((v) => {
+                const isActive = voice === v.id;
+                return (
+                  <button
+                    key={v.id}
+                    onClick={() => onChange({ voice: v.id })}
+                    className="flex-1 py-2 rounded-xl text-[12px] font-medium transition-all duration-200"
+                    style={{
+                      background: isActive ? "rgba(91,108,255,0.1)" : "white",
+                      color: isActive ? "var(--color-primary)" : "var(--color-text-secondary)",
+                      border: isActive ? "1.5px solid var(--color-primary)" : "1.5px solid transparent",
+                    }}
+                  >
+                    {v.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* 语速 + 音量同一行 */}
