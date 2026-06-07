@@ -119,18 +119,31 @@ export default function App() {
 
         {/* 右侧控制 */}
         <div className="flex items-center gap-3">
-          {/* 纯听模式 */}
-          <button
-            onClick={() => setListenMode(!listenMode)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-200"
-            style={{
-              background: listenMode ? "rgba(91,108,255,0.1)" : "transparent",
-              color: listenMode ? "var(--color-primary)" : "var(--color-text-secondary)",
-            }}
-          >
-            {listenMode ? <FaComment size={11} /> : <FaHeadphones size={11} />}
-            {listenMode ? "Show Text" : "Listen Only"}
-          </button>
+          {/* 纯听模式 Segmented Control */}
+          <div className="flex p-1 rounded-2xl" style={{ background: "rgba(0,0,0,0.04)" }}>
+            <button
+              onClick={() => setListenMode(false)}
+              className="flex items-center gap-1 px-3 py-1 rounded-xl text-[11px] font-medium transition-all duration-200"
+              style={{
+                background: !listenMode ? "white" : "transparent",
+                color: !listenMode ? "var(--color-primary)" : "var(--color-text-secondary)",
+                boxShadow: !listenMode ? "0 1px 4px rgba(0,0,0,0.08)" : "none",
+              }}
+            >
+              <FaComment size={10} /> Text
+            </button>
+            <button
+              onClick={() => setListenMode(true)}
+              className="flex items-center gap-1 px-3 py-1 rounded-xl text-[11px] font-medium transition-all duration-200"
+              style={{
+                background: listenMode ? "white" : "transparent",
+                color: listenMode ? "var(--color-primary)" : "var(--color-text-secondary)",
+                boxShadow: listenMode ? "0 1px 4px rgba(0,0,0,0.08)" : "none",
+              }}
+            >
+              <FaHeadphones size={10} /> Listen
+            </button>
+          </div>
 
           {/* 语言 */}
           <div className="flex items-center gap-1 text-xs" style={{ color: "var(--color-text-secondary)" }}>
