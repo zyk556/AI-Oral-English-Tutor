@@ -44,7 +44,7 @@ export default function ScenarioSelector({
           <button
             key={s.id}
             onClick={() => onSelect(s.id)}
-            className="w-full flex items-center gap-3 p-4 rounded-3xl text-left transition-all duration-200 relative overflow-hidden"
+            className="w-full flex items-center gap-3 p-5 rounded-3xl text-left transition-all duration-200 relative overflow-hidden"
             style={{
               background: isActive ? "rgba(91,108,255,0.08)" : "white",
               border: isActive
@@ -65,16 +65,16 @@ export default function ScenarioSelector({
             <div className="text-2xl">{s.icon}</div>
             <div>
               <div
-                className="text-sm font-medium"
+                className="text-[15px] font-medium"
                 style={{ color: isActive ? "var(--color-primary)" : "var(--color-text)" }}
               >
                 {s.label}
               </div>
-              <div className="text-[11px] leading-relaxed" style={{ color: "var(--color-text-secondary)" }}>
+              <div className="text-[12px] leading-relaxed" style={{ color: "var(--color-text-secondary)" }}>
                 {isActive && currentContext ? currentContext : s.subtitle}
               </div>
               {isActive && currentContext && (
-                <div className="text-[9px] mt-0.5 italic" style={{ color: "rgba(110,110,115,0.4)" }}>
+                <div className="text-[10px] mt-0.5 italic" style={{ color: "rgba(110,110,115,0.4)" }}>
                   For reference only
                 </div>
               )}

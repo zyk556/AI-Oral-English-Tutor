@@ -59,7 +59,7 @@ export default function VoiceSettings(props: VoiceSettingsProps) {
 
   return (
     <div
-      className="p-5 rounded-3xl space-y-5"
+      className="p-6 rounded-3xl space-y-6"
       style={{
         background: "white",
         boxShadow: "0 1px 2px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06)",

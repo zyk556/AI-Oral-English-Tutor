@@ -173,20 +173,20 @@ export default function App() {
           {/* 场景提示卡 */}
           {scenario && (
             <div
-              className="mb-4 p-4 rounded-3xl flex items-start justify-between gap-3"
+              className="mb-4 p-5 rounded-3xl flex items-start justify-between gap-3"
               style={{
                 background: "linear-gradient(135deg, rgba(91,108,255,0.06), rgba(123,97,255,0.06))",
                 border: "1px solid rgba(91,108,255,0.08)",
               }}
             >
               <div className="flex-1">
-                <div className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
+                <div className="text-[15px] font-semibold" style={{ color: "var(--color-text)" }}>
                   {scenario === "interview" ? "💼 Interview" : scenario === "ordering" ? "🍽️ Restaurant" : "👥 Meeting"}
                 </div>
-                <div className="text-xs mt-1.5 leading-relaxed" style={{ color: "var(--color-text-secondary)" }}>
+                <div className="text-[13px] mt-2 leading-relaxed" style={{ color: "var(--color-text-secondary)" }}>
                   {scenarioContext}
                 </div>
-                <div className="text-[10px] mt-1 italic" style={{ color: "rgba(110,110,115,0.5)" }}>
+                <div className="text-[11px] mt-1 italic" style={{ color: "rgba(110,110,115,0.5)" }}>
                   For reference only — speak freely
                 </div>
               </div>
