@@ -122,6 +122,10 @@ interface AppState {
   listenMode: boolean;
   setListenMode: (v: boolean) => void;
 
+  // 难度
+  difficulty: "low" | "mid" | "high";
+  setDifficulty: (d: "low" | "mid" | "high") => void;
+
   // 右侧评分面板
   selectedEvaluation: Evaluation | null;
   setSelectedEvaluation: (e: Evaluation | null) => void;
@@ -227,6 +231,9 @@ export const useStore = create<AppState>((set, get) => ({
 
   listenMode: false as boolean,
   setListenMode: (v) => set({ listenMode: v }),
+
+  difficulty: "mid" as "low" | "mid" | "high",
+  setDifficulty: (d) => set({ difficulty: d }),
 
   selectedEvaluation: null as Evaluation | null,
   setSelectedEvaluation: (e) => set({ selectedEvaluation: e }),
