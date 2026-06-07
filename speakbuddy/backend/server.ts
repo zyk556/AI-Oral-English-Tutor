@@ -166,52 +166,60 @@ async function generateReplyAndEvaluation(
 
   const userMsg = history[history.length - 1]?.content || "";
 
-  // 并行：一个生成对话，一个生成评估
-  const [replyResult, evalResult] = await Promise.allSettled([
-    // 调用 1：对话回复（纯文本）
-    callLLM([
+  // 串行：先对话，再评估（更稳定）
+  let reply = "I didn't catch that, could you repeat?";
+  try {
+    reply = await callLLM([
       { role: "system", content: scenarioPrompt },
       ...history,
-    ], 300),
-
-    // 调用 2：评估用户英语（JSON）
-    callLLM([
-      {
-        role: "system",
-        content: `You are an English teacher. Evaluate the user's English. Reply with ONLY a JSON object, no extra text:
-{"corrected":"corrected version of user's message","grammar":[{"original":"error","corrected":"fix","explanation":"why"}],"vocabulary":[{"suggestion":"better word","context":"why"}],"score":{"fluency":7,"grammar":7,"vocabulary":7,"overall":7},"comment":"one helpful sentence"}`,
-      },
-      { role: "user", content: `Evaluate this English: "${userMsg}"` },
-    ], 500),
-  ]);
-
-  // 处理对话回复
-  let reply = "I didn't catch that, could you repeat?";
-  if (replyResult.status === "fulfilled") {
-    reply = replyResult.value || reply;
-  } else {
-    console.error("[LLM] Reply call failed:", replyResult.reason);
+    ], 300) || reply;
+  } catch (err) {
+    console.error("[LLM] Reply call failed:", err);
   }
 
-  // 处理评估
+  // 评估用户英语
+  let evalRaw = "";
+  try {
+    evalRaw = await callLLM([
+      {
+        role: "system",
+        content: `You are an English teacher. Evaluate the student's English. Reply with ONLY a JSON object, no markdown. Keep the comment under 20 words. Do NOT use double quotes inside string values. Example:
+{"corrected":"I worked on many projects","grammar":[{"original":"I work on","corrected":"I worked on","explanation":"use past tense"}],"vocabulary":[],"score":{"fluency":8,"grammar":7,"vocabulary":8,"overall":7},"comment":"Good job. Watch your verb tenses."}`,
+      },
+      { role: "user", content: `Student said: "${userMsg}"` },
+    ], 800);
+    console.log("[Eval] Raw response:", evalRaw.substring(0, 300));
+  } catch (err) {
+    console.error("[Eval] Call failed:", err);
+  }
+
+  // 解析评估
   let evaluation: Evaluation = {
     corrected: "", grammar: [], vocabulary: [],
     score: { fluency: 7, grammar: 7, vocabulary: 7, overall: 7 },
     comment: "",
   };
 
-  if (evalResult.status === "fulfilled") {
+  if (evalRaw) {
     try {
-      let jsonStr = evalResult.value.trim();
+      let jsonStr = evalRaw.trim();
       jsonStr = jsonStr.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "");
       jsonStr = jsonStr.replace(/^[^{]*/, "");
       const first = jsonStr.indexOf("{");
-      const last = jsonStr.lastIndexOf("}");
-      if (first !== -1 && last > first) jsonStr = jsonStr.substring(first, last + 1);
+      let last = jsonStr.lastIndexOf("}");
+      // 如果 JSON 被截断（没有闭合的 }），尝试修复
+      if (first !== -1 && (last === -1 || last <= first)) {
+        jsonStr = jsonStr.substring(first);
+        // 截断到最后一个完整的值，补上引号和括号
+        if (!jsonStr.endsWith('"')) jsonStr += '"';
+        if (!jsonStr.endsWith('}')) jsonStr += '}}';
+        jsonStr = jsonStr.replace(/,\s*$/, ''); // 去掉尾部逗号
+      } else if (first !== -1) {
+        jsonStr = jsonStr.substring(first, last + 1);
+      }
       jsonStr = jsonStr.replace(/,\s*([}\]])/g, "$1");
-      jsonStr = jsonStr.replace(/'/g, '"');
 
-      console.log("[Eval] JSON:", jsonStr.substring(0, 300));
+      console.log("[Eval] JSON:", jsonStr.substring(0, 500));
       const parsed = JSON.parse(jsonStr);
       evaluation = {
         corrected: parsed.corrected || "",
@@ -221,7 +229,7 @@ async function generateReplyAndEvaluation(
         comment: parsed.comment || "",
       };
     } catch (err) {
-      console.error("[Eval] Parse failed:", evalResult.value?.substring(0, 300));
+      console.error("[Eval] Parse failed:", evalRaw.substring(0, 300));
     }
   } else {
     console.error("[Eval] Call failed:", evalResult.reason);
