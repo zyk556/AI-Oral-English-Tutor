@@ -193,8 +193,8 @@ async function generateReplyAndEvaluation(
     evalRaw = await callLLM([
       {
         role: "system",
-        content: `You are an English teacher. Evaluate the student's English. Reply with ONLY a JSON object, no markdown. Keep the comment under 20 words. Do NOT use double quotes inside string values. Example:
-{"corrected":"I worked on many projects","grammar":[{"original":"I work on","corrected":"I worked on","explanation":"use past tense"}],"vocabulary":[],"score":{"fluency":8,"grammar":7,"vocabulary":8,"overall":7},"comment":"Good job. Watch your verb tenses."}`,
+        content: `You are an English teacher. Evaluate the student's English. Reply with ONLY a JSON object, no markdown. Keep the comment under 20 words. Do NOT use double quotes inside string values. The "corrected" field should be a BETTER version of the student's original sentence - keep the same meaning and structure, just fix errors and make it sound more natural. Do NOT rewrite it completely. Example:
+{"corrected":"I worked on many projects last year","grammar":[{"original":"I work on many project","corrected":"I worked on many projects","explanation":"past tense needed, plural noun"}],"vocabulary":[],"score":{"fluency":8,"grammar":7,"vocabulary":8,"overall":7},"comment":"Good job. Watch your verb tenses."}`,
       },
       { role: "user", content: `Student said: "${userMsg}"` },
     ], 800);
