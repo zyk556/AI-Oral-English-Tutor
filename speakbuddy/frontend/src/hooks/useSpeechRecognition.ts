@@ -4,6 +4,7 @@ export function useSpeechRecognition() {
   const recognitionRef = useRef<any>(null);
   const [isListening, setIsListening] = useState(false);
   const transcriptRef = useRef("");
+  const manualStopRef = useRef(false);
 
   const startListening = useCallback(
     (onResult: (text: string) => void) => {
@@ -18,48 +19,53 @@ export function useSpeechRecognition() {
 
       const recognition = new SpeechRecognition();
       recognition.lang = "en-US";
-      recognition.continuous = true;       // 持续监听，不自动停止
+      recognition.continuous = true;
       recognition.interimResults = false;
-      recognition.maxAlternatives = 1;
 
       transcriptRef.current = "";
+      manualStopRef.current = false;
 
       recognition.onstart = () => {
         setIsListening(true);
-        console.log("[Speech] Listening...");
+        console.log("[Speech] Started");
       };
 
       recognition.onresult = (event: any) => {
-        // 累积所有结果
-        let finalTranscript = "";
         for (let i = 0; i < event.results.length; i++) {
           if (event.results[i].isFinal) {
-            finalTranscript += event.results[i][0].transcript + " ";
+            transcriptRef.current += event.results[i][0].transcript + " ";
           }
         }
-        transcriptRef.current = finalTranscript.trim();
-        console.log(`[Speech] Accumulated: "${transcriptRef.current}"`);
+        console.log("[Speech] Accumulated:", transcriptRef.current.trim());
       };
 
       recognition.onerror = (event: any) => {
         console.error("[Speech] Error:", event.error);
-        if (event.error !== "aborted") {
-          setIsListening(false);
+        if (event.error === "no-speech" || event.error === "aborted") {
+          // 浏览器因无声自动结束 → 重启继续监听
+          if (!manualStopRef.current) {
+            try { recognition.start(); } catch {}
+            return;
+          }
         }
+        setIsListening(false);
       };
 
       recognition.onend = () => {
+        // 如果不是用户手动停止，自动重启
+        if (!manualStopRef.current) {
+          try { recognition.start(); } catch {}
+          return;
+        }
+        // 用户手动停止 → 发送结果
         setIsListening(false);
-        // 手动停止后，返回累积的文本
         const text = transcriptRef.current.trim();
         if (text) {
-          console.log(`[Speech] Final result: "${text}"`);
+          console.log("[Speech] Sending:", text);
           onResult(text);
         }
+        recognitionRef.current = null;
       };
-
-      // 保存 onResult 回调，供 stopListening 使用
-      (recognition as any)._onResult = onResult;
 
       recognitionRef.current = recognition;
       recognition.start();
@@ -68,9 +74,9 @@ export function useSpeechRecognition() {
   );
 
   const stopListening = useCallback(() => {
+    manualStopRef.current = true;
     if (recognitionRef.current) {
-      recognitionRef.current.stop(); // 触发 onend，返回结果
-      recognitionRef.current = null;
+      recognitionRef.current.stop(); // 触发 onend → 发送结果
     }
   }, []);
 
