@@ -82,6 +82,10 @@ interface AppState {
   listenMode: boolean;
   setListenMode: (v: boolean) => void;
 
+  // 右侧评分面板
+  selectedEvaluation: Evaluation | null;
+  setSelectedEvaluation: (e: Evaluation | null) => void;
+
   // 语音设置
   voiceSettings: { voice: string; speed: number; volume: number };
   setVoiceSettings: (s: { voice?: string; speed?: number; volume?: number }) => void;
@@ -183,6 +187,9 @@ export const useStore = create<AppState>((set, get) => ({
 
   listenMode: false as boolean,
   setListenMode: (v) => set({ listenMode: v }),
+
+  selectedEvaluation: null as Evaluation | null,
+  setSelectedEvaluation: (e) => set({ selectedEvaluation: e }),
 
   voiceSettings: { voice: "Chloe", speed: 1.0, volume: 1.0 },
   setVoiceSettings: (s: { voice?: string; speed?: number; volume?: number }) =>
