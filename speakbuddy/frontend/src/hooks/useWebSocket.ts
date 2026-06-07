@@ -128,6 +128,13 @@ export function useWebSocket() {
     setStoreScenario(scenario);
   }, [setStoreScenario]);
 
+  const sendDifficulty = useCallback((difficulty: string) => {
+    const ws = wsRef.current;
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: "difficulty", difficulty }));
+    }
+  }, []);
+
   const sendVoiceSettings = useCallback((settings: { voice?: string; speed?: number; volume?: number }) => {
     const ws = wsRef.current;
     if (ws && ws.readyState === WebSocket.OPEN) {
@@ -156,5 +163,5 @@ export function useWebSocket() {
     });
   }, []);
 
-  return { sendText, setScenario, sendVoiceSettings, previewVoice };
+  return { sendText, setScenario, sendDifficulty, sendVoiceSettings, previewVoice };
 }

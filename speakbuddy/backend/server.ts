@@ -36,6 +36,7 @@ interface SessionState {
   scenario: string | null;
   histories: Record<string, Array<{ role: "user" | "assistant"; content: string }>>;
   voiceSettings: VoiceSettings;
+  difficulty: "low" | "mid" | "high";
 }
 
 const app = new Hono();
@@ -49,6 +50,7 @@ app.get(
       scenario: null,
       histories: {},
       voiceSettings: { voice: "Chloe", speed: 1.0, volume: 1.0 },
+      difficulty: "mid",
     };
 
     // 获取当前场景的历史
@@ -69,6 +71,11 @@ app.get(
           const msg = JSON.parse(String(event.data));
 
           switch (msg.type) {
+            case "difficulty":
+              console.log(`[WS] Difficulty:`, msg.difficulty);
+              state.difficulty = msg.difficulty;
+              break;
+
             case "voice_settings":
               console.log(`[WS] Voice settings:`, msg.settings);
               state.voiceSettings = { ...state.voiceSettings, ...msg.settings };
@@ -106,7 +113,8 @@ app.get(
                 // 双角色 LLM：一次调用，返回对话回复 + 评估
                 const result = await generateReplyAndEvaluation(
                   state.scenario,
-                  history
+                  history,
+                  state.difficulty
                 );
                 const { reply, evaluation } = result;
                 const translation = result.translation;
@@ -152,8 +160,15 @@ app.get(
 // 双角色 LLM：并行调用对话 + 评估
 async function generateReplyAndEvaluation(
   scenario: string,
-  history: Array<{ role: "user" | "assistant"; content: string }>
+  history: Array<{ role: "user" | "assistant"; content: string }>,
+  difficulty: "low" | "mid" | "high" = "mid"
 ): Promise<{ reply: string; translation: string; evaluation: Evaluation }> {
+  const difficultyGuide: Record<string, string> = {
+    low: "Use simple vocabulary and short sentences. Speak like talking to a middle school student. Use basic words and simple grammar.",
+    mid: "Use everyday vocabulary and natural sentences. Speak like talking to a high school student. Use common expressions.",
+    high: "Use advanced vocabulary and complex sentences. Speak like talking to a professional. Use idioms and sophisticated expressions.",
+  };
+
   const scenarioPrompts: Record<string, string> = {
     interview:
       "You are an experienced HR interviewer at a tech company. Ask behavioral and technical questions naturally. Keep the tone professional but friendly. Limit each response to 2-3 sentences.",
@@ -177,10 +192,11 @@ async function generateReplyAndEvaluation(
   const userMsg = history[history.length - 1]?.content || "";
 
   // 串行：先对话，再评估（更稳定）
+  const diffGuide = difficultyGuide[difficulty] || difficultyGuide.mid;
   let reply = "I didn't catch that, could you repeat?";
   try {
     reply = await callLLM([
-      { role: "system", content: scenarioPrompt },
+      { role: "system", content: `${scenarioPrompt}\n\n${diffGuide}` },
       ...history,
     ], 300) || reply;
   } catch (err) {
@@ -193,8 +209,8 @@ async function generateReplyAndEvaluation(
     evalRaw = await callLLM([
       {
         role: "system",
-        content: `You are an English teacher. Evaluate the student's English. Reply with ONLY a JSON object, no markdown. Keep the comment under 20 words. Do NOT use double quotes inside string values. Example:
-{"corrected":"I worked on many projects","grammar":[{"original":"I work on","corrected":"I worked on","explanation":"use past tense"}],"vocabulary":[],"score":{"fluency":8,"grammar":7,"vocabulary":8,"overall":7},"comment":"Good job. Watch your verb tenses."}`,
+        content: `You are an English teacher. Evaluate the student's English. Reply with ONLY a JSON object, no markdown. Keep the comment under 20 words. Do NOT use double quotes inside string values. The "corrected" field should be a BETTER version of the student's original sentence - keep the same meaning and structure, just fix errors and make it sound more natural. Do NOT rewrite it completely. Example:
+{"corrected":"I worked on many projects last year","grammar":[{"original":"I work on many project","corrected":"I worked on many projects","explanation":"past tense needed, plural noun"}],"vocabulary":[],"score":{"fluency":8,"grammar":7,"vocabulary":8,"overall":7},"comment":"Good job. Watch your verb tenses."}`,
       },
       { role: "user", content: `Student said: "${userMsg}"` },
     ], 800);

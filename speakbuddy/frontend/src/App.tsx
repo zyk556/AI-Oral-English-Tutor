@@ -13,8 +13,9 @@ export default function App() {
     scenario, scenarioContext, refreshContext, messages, connected, playingId, pausedId,
     setPlayingId, setPausedId, listenMode, setListenMode,
     voiceSettings, setVoiceSettings, selectedEvaluation, setSelectedEvaluation,
+    difficulty, setDifficulty,
   } = useStore();
-  const { sendText, setScenario, sendVoiceSettings, previewVoice } = useWebSocket();
+  const { sendText, setScenario, sendDifficulty, sendVoiceSettings, previewVoice } = useWebSocket();
   const { startListening, stopListening, isListening } = useSpeechRecognition();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -120,6 +121,24 @@ export default function App() {
 
         {/* 右侧控制 */}
         <div className="flex items-center gap-3">
+          {/* 难度 Segmented Control */}
+          <div className="flex p-1 rounded-2xl" style={{ background: "rgba(0,0,0,0.04)" }}>
+            {(["low", "mid", "high"] as const).map((d) => (
+              <button
+                key={d}
+                onClick={() => { setDifficulty(d); sendDifficulty(d); }}
+                className="px-3 py-1 rounded-xl text-[11px] font-medium transition-all duration-200"
+                style={{
+                  background: difficulty === d ? "white" : "transparent",
+                  color: difficulty === d ? "var(--color-primary)" : "var(--color-text-secondary)",
+                  boxShadow: difficulty === d ? "0 1px 4px rgba(0,0,0,0.08)" : "none",
+                }}
+              >
+                {d === "low" ? "Easy" : d === "mid" ? "Mid" : "Hard"}
+              </button>
+            ))}
+          </div>
+
           {/* 纯听模式 Segmented Control */}
           <div className="flex p-1 rounded-2xl" style={{ background: "rgba(0,0,0,0.04)" }}>
             <button

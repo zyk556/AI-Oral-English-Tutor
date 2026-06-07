@@ -50,7 +50,7 @@ export default function EvaluationPanel({ evaluation, onClose }: EvaluationPanel
       {corrected && (
         <div className="p-3 rounded-2xl" style={{ background: "rgba(91,108,255,0.06)" }}>
           <div className="text-[10px] font-semibold mb-1" style={{ color: "var(--color-primary)" }}>
-            Corrected Version
+            Better Version
           </div>
           <div className="text-[13px]" style={{ color: "var(--color-text)" }}>{corrected}</div>
         </div>
