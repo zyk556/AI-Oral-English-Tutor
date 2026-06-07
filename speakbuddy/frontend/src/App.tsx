@@ -182,7 +182,15 @@ export default function App() {
             >
               <div className="flex-1">
                 <div className="text-[15px] font-semibold" style={{ color: "var(--color-text)" }}>
-                  {scenario === "interview" ? "💼 Interview" : scenario === "ordering" ? "🍽️ Restaurant" : "👥 Meeting"}
+                  {scenario === "interview" ? "💼 Interview"
+                    : scenario === "ordering" ? "🍽️ Restaurant"
+                    : scenario === "meeting" ? "👥 Meeting"
+                    : scenario === "directions" ? "🗺️ Directions"
+                    : scenario === "doctor" ? "🏥 Doctor"
+                    : scenario === "airport" ? "✈️ Airport"
+                    : scenario === "hotel" ? "🏨 Hotel"
+                    : scenario === "dating" ? "💕 Dating"
+                    : scenario}
                 </div>
                 <div className="text-[13px] mt-2 leading-relaxed" style={{ color: "var(--color-text-secondary)" }}>
                   {scenarioContext}
