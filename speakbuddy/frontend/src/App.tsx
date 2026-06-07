@@ -91,7 +91,7 @@ export default function App() {
   const disabled = !scenario || !connected || processing;
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: "var(--color-bg)" }}>
+    <div className="h-screen flex flex-col overflow-hidden" style={{ background: "var(--color-bg)" }}>
       {/* ===== 顶部导航栏 ===== */}
       <header
         className="sticky top-0 z-40 h-[72px] flex items-center justify-between px-6"
@@ -165,7 +165,7 @@ export default function App() {
       </header>
 
       {/* ===== 三栏主体 ===== */}
-      <div className="flex-1 flex max-w-[1600px] mx-auto w-full">
+      <div className="flex-1 flex max-w-[1600px] mx-auto w-full min-h-0">
         {/* 左侧场景栏 */}
         <ScenarioSelector onSelect={setScenario} currentScenario={scenario} currentContext={scenarioContext} />
 
@@ -272,7 +272,7 @@ export default function App() {
         </main>
 
         {/* 右侧辅助区 */}
-        <aside className="w-[360px] flex-shrink-0 py-4 pr-4 flex flex-col gap-4 overflow-y-auto hidden lg:flex">
+        <aside className="w-[360px] flex-shrink-0 py-4 pr-4 flex flex-col gap-3 overflow-hidden hidden lg:flex">
           {/* 评分详情面板（点击消息气泡的评分触发） */}
           {selectedEvaluation && (
             <EvaluationPanel
