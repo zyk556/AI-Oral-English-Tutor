@@ -2,7 +2,7 @@
 
 > AI 英语口语陪练 — 选场景、开口说、即时纠错
 
-### 🔗 [体验](https://ai-oral-english-tutor-production.up.railway.app)
+### 🔗 [体验：ai-oral-english-tutor-production.up.railway.app](https://ai-oral-english-tutor-production.up.railway.app)
 
 ---
 
