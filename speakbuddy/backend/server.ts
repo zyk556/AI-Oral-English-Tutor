@@ -344,6 +344,45 @@ async function generateTTS(text: string, voiceSettings?: VoiceSettings): Promise
   return Buffer.from(audioBase64, "base64");
 }
 
+// 查词翻译 API
+app.post("/api/translate", async (c: any) => {
+  try {
+    const body = await c.req.json();
+    const { word, definitions } = body;
+
+    const prompt = `Translate these English word definitions to concise Chinese. Reply with ONLY a JSON array of Chinese strings, one per definition. No extra text.
+Word: ${word}
+Definitions:
+${definitions.map((d: string, i: number) => `${i + 1}. ${d}`).join("\n")}
+
+Example reply: ["定义1的中文","定义2的中文"]`;
+
+    const raw = await callLLM(
+      [{ role: "system", content: prompt }, { role: "user", content: word }],
+      300
+    );
+
+    // 解析 JSON 数组
+    let translated: string[] = definitions;
+    try {
+      let jsonStr = raw.trim();
+      const start = jsonStr.indexOf("[");
+      const end = jsonStr.lastIndexOf("]");
+      if (start !== -1 && end > start) {
+        jsonStr = jsonStr.substring(start, end + 1);
+      }
+      translated = JSON.parse(jsonStr);
+    } catch {
+      console.error("[Translate] Parse failed:", raw.substring(0, 200));
+    }
+
+    return c.json({ definitions: translated });
+  } catch (err) {
+    console.error("[Translate] Error:", err);
+    return c.json({ definitions: [] }, 500);
+  }
+});
+
 // 静态文件服务（前端打包产物）
 const PUBLIC_DIR = join(import.meta.dirname, "public");
 

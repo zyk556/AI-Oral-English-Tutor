@@ -1,41 +1,77 @@
 import { useState } from "react";
 import { FaSearch, FaSpinner } from "react-icons/fa";
 
-interface DictResult {
-  word: string;
-  phonetic?: string;
-  meanings: Array<{
-    partOfSpeech: string;
-    definitions: string[];
-  }>;
+interface Meaning {
+  pos: string;
+  defs: string[];
 }
+
+const POS_MAP: Record<string, string> = {
+  noun: "n.",
+  verb: "v.",
+  adjective: "adj.",
+  adverb: "adv.",
+  preposition: "prep.",
+  conjunction: "conj.",
+  pronoun: "pron.",
+  interjection: "interj.",
+  determiner: "det.",
+  "proper noun": "n.",
+};
 
 export default function DictionaryCard() {
   const [query, setQuery] = useState("");
-  const [result, setResult] = useState<DictResult | null>(null);
+  const [word, setWord] = useState("");
+  const [phonetic, setPhonetic] = useState("");
+  const [meanings, setMeanings] = useState<Meaning[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const handleSearch = async () => {
-    const word = query.trim().toLowerCase();
-    if (!word) return;
+    const q = query.trim().toLowerCase();
+    if (!q) return;
     setLoading(true);
     setError("");
-    setResult(null);
+    setMeanings([]);
+    setWord("");
 
     try {
-      const resp = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`);
-      if (!resp.ok) throw new Error("Word not found");
+      // 1. 查词典
+      const resp = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${q}`);
+      if (!resp.ok) throw new Error("not found");
       const data = await resp.json();
       const entry = data[0];
-      setResult({
-        word: entry.word,
-        phonetic: entry.phonetic || entry.phonetics?.[0]?.text || "",
-        meanings: entry.meanings.map((m: any) => ({
-          partOfSpeech: m.partOfSpeech,
-          definitions: m.definitions.slice(0, 3).map((d: any) => d.definition),
-        })),
+      const rawPhonetic = entry.phonetic || entry.phonetics?.[0]?.text || "";
+      setWord(entry.word);
+      setPhonetic(rawPhonetic);
+
+      // 收集英文释义
+      const enMeanings: Meaning[] = entry.meanings.map((m: any) => ({
+        pos: POS_MAP[m.partOfSpeech] || m.partOfSpeech + ".",
+        defs: m.definitions.slice(0, 2).map((d: any) => d.definition),
+      }));
+
+      // 2. 批量翻译成中文（用后端 MiMo）
+      const allDefs = enMeanings.flatMap((m) => m.defs);
+      const translateResp = await fetch("/api/translate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ word: entry.word, definitions: allDefs }),
       });
+
+      if (translateResp.ok) {
+        const translated = await translateResp.json();
+        // translated.definitions 是中文释义数组
+        let idx = 0;
+        const result: Meaning[] = enMeanings.map((m) => ({
+          pos: m.pos,
+          defs: m.defs.map(() => translated.definitions[idx++] || ""),
+        }));
+        setMeanings(result);
+      } else {
+        // 翻译失败，显示英文
+        setMeanings(enMeanings);
+      }
     } catch {
       setError("Word not found");
     } finally {
@@ -55,7 +91,6 @@ export default function DictionaryCard() {
         Dictionary
       </div>
 
-      {/* 搜索框 */}
       <div
         className="flex items-center gap-2 px-3 py-2 rounded-xl"
         style={{ background: "var(--color-bg)" }}
@@ -71,7 +106,6 @@ export default function DictionaryCard() {
         />
       </div>
 
-      {/* 结果 */}
       {loading && (
         <div className="flex justify-center py-3">
           <FaSpinner className="animate-spin" size={14} style={{ color: "var(--color-primary)" }} />
@@ -84,27 +118,27 @@ export default function DictionaryCard() {
         </div>
       )}
 
-      {result && (
-        <div className="mt-2 space-y-1.5">
+      {word && meanings.length > 0 && (
+        <div className="mt-2 space-y-2">
           <div className="flex items-baseline gap-2">
             <span className="text-[14px] font-semibold" style={{ color: "var(--color-text)" }}>
-              {result.word}
+              {word}
             </span>
-            {result.phonetic && (
+            {phonetic && (
               <span className="text-[11px]" style={{ color: "var(--color-text-secondary)" }}>
-                {result.phonetic}
+                {phonetic}
               </span>
             )}
           </div>
-          {result.meanings.map((m, i) => (
+          {meanings.map((m, i) => (
             <div key={i}>
               <span
                 className="text-[10px] px-1.5 py-0.5 rounded-md font-medium"
                 style={{ background: "rgba(91,108,255,0.08)", color: "var(--color-primary)" }}
               >
-                {m.partOfSpeech}
+                {m.pos}
               </span>
-              {m.definitions.map((d, j) => (
+              {m.defs.map((d, j) => (
                 <div key={j} className="text-[11px] mt-0.5 pl-2" style={{ color: "var(--color-text-secondary)" }}>
                   • {d}
                 </div>
