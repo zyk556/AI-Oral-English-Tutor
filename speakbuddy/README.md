@@ -1,99 +1,135 @@
-# SpeakBuddy - AI English Speaking Practice
+# SpeakBuddy AI — 英语口语陪练
 
-A browser-based English speaking practice tool. Users select a conversation scenario (Interview / Restaurant / Meeting), hold to speak, and have a real-time voice conversation with AI. The system provides speech recognition, AI responses, and text-to-speech playback.
+一个基于浏览器的 AI 英语口语练习工具。用户选择对话场景，通过语音与 AI 进行实时英语对话，系统提供语法纠错、词汇建议、四维评分和中文翻译。
 
-## Tech Stack
+## 功能特性
 
-**Frontend:** React 18 + TypeScript + Vite + Tailwind CSS + Zustand
-**Backend:** Hono + Bun + Deepgram (STT) + OpenAI (Chat + TTS)
+- **8 个对话场景**：面试、餐厅、会议、问路、看病、机场、酒店、约会
+- **浏览器语音识别**：点击麦克风开始录音，再点停止，支持长时间思考
+- **AI 对话回复**：小米 MiMo 大模型根据场景生成自然对话
+- **语音合成**：MiMo TTS 将 AI 回复转成语音，支持 4 种英文音色
+- **双角色 LLM**：一次调用同时生成对话回复 + 英语评估
+- **语法纠错**：逐条列出语法错误，附纠正和解释
+- **词汇建议**：推荐更好的用词表达
+- **四维评分**：流畅度、语法、词汇、综合（1-10 分）
+- **中文翻译**：AI 回复自动翻译为中文
+- **纯听模式**：隐藏文字，纯听力练习，可临时查看字幕
+- **难度选择**：Easy / Mid / Hard 三档，调整 AI 用词复杂度
+- **现场查词**：左下角词典卡片，输入单词即查词性 + 中文释义
+- **语音设置**：4 种音色（Chloe/Mia/Milo/Dean）、3 档语速、音量调节、试听
+- **多场景独立记录**：每个场景独立保存聊天历史，切换不丢失
+- **随机语境**：每次选择场景随机生成沉浸式背景设定
 
-## Project Structure
+## 技术栈
+
+| 层级 | 技术 |
+|------|------|
+| 前端 | React 18 + TypeScript + Vite + Tailwind CSS v4 + Zustand |
+| 后端 | Hono + Node.js (tsx) + WebSocket |
+| AI | 小米 MiMo API（对话 + ASR + TTS） |
+| 语音识别 | 浏览器 Web Speech API（免费） |
+
+## 项目结构
 
 ```
 speakbuddy/
 ├── backend/
-│   ├── server.ts          # WebSocket server with Deepgram + OpenAI integration
-│   ├── .env               # API keys (fill in your own)
-│   └── package.json
+│   ├── server.ts              # WebSocket 服务 + LLM/TTS 调用 + 静态文件服务
+│   ├── .env                   # MIMO_API_KEY
+│   ├── .env.example           # 环境变量模板
+│   ├── package.json
+│   └── tsconfig.json
 ├── frontend/
-│   ├── vite.config.ts     # Vite config with Tailwind + WebSocket proxy
+│   ├── vite.config.ts         # Vite + Tailwind + WebSocket/API 代理
 │   ├── index.html
 │   ├── tsconfig.json
-│   ├── src/
-│   │   ├── main.tsx
-│   │   ├── App.tsx            # Main UI: scenario selector + chat + record button
-│   │   ├── store.ts           # Zustand global state
-│   │   ├── index.css          # Tailwind import
-│   │   ├── hooks/
-│   │   │   └── useWebSocket.ts  # WebSocket connection management
-│   │   └── components/
-│   │       ├── ScenarioSelector.tsx  # Scenario selection buttons
-│   │       ├── ChatBubble.tsx        # Chat message bubble
-│   │       └── RecordButton.tsx      # Hold-to-record microphone button
-│   └── package.json
+│   ├── package.json
+│   └── src/
+│       ├── main.tsx
+│       ├── index.css          # Apple 设计系统 + 动画
+│       ├── App.tsx            # 三栏布局主界面
+│       ├── store.ts           # Zustand 全局状态
+│       ├── hooks/
+│       │   ├── useWebSocket.ts          # WebSocket 通信
+│       │   └── useSpeechRecognition.ts  # 浏览器语音识别
+│       └── components/
+│           ├── ScenarioSelector.tsx  # 场景选择网格
+│           ├── ChatBubble.tsx        # 聊天气泡 + 音频控制
+│           ├── CorrectionCard.tsx    # 评分气泡（折叠）
+│           ├── EvaluationPanel.tsx   # 评分详情面板（右侧展开）
+│           ├── VoiceSettings.tsx     # 语音设置面板
+│           └── DictionaryCard.tsx    # 查词卡片
 └── README.md
 ```
 
-## Setup
+## 快速开始
 
-### Prerequisites
-- [Bun](https://bun.sh/) (or Node.js 18+)
-- Deepgram API key ([get one here](https://deepgram.com/))
-- OpenAI API key ([get one here](https://platform.openai.com/))
+### 1. 申请 API Key
 
-### 1. Configure API Keys
+前往 [小米 MiMo 开放平台](https://platform.xiaomimimo.com) 注册并获取 API Key。
 
-Edit `backend/.env` and fill in your API keys:
-
-```
-DEEPGRAM_API_KEY=your_deepgram_api_key
-OPENAI_API_KEY=your_openai_api_key
-```
-
-### 2. Install Dependencies
+### 2. 配置环境变量
 
 ```bash
-# Backend
 cd backend
-bun install
+cp .env.example .env
+# 编辑 .env，填入你的 MIMO_API_KEY
+```
 
-# Frontend
+### 3. 安装依赖
+
+```bash
+# 后端
+cd backend
+npm install
+
+# 前端
 cd ../frontend
-bun install
+npm install
 ```
 
-### 3. Run the App
+### 4. 启动
 
 ```bash
-# Terminal 1 - Start backend
+# 终端 1 - 后端
 cd backend
-bun run dev
+npm run dev
 
-# Terminal 2 - Start frontend
+# 终端 2 - 前端（开发模式）
 cd frontend
-bun run dev
+npm run dev
 ```
 
-Open http://localhost:5173 in your browser.
+打开 http://localhost:5173
 
-## How It Works
+### 5. 生产部署
 
-1. **Select a Scenario** - Choose from Interview, Restaurant, or Meeting
-2. **Hold to Speak** - Press and hold the microphone button to record
-3. **AI Responds** - Your speech is transcribed via Deepgram, GPT-4o-mini generates a reply, and TTS reads it back
-4. **Chat History** - All messages appear as chat bubbles with optional audio playback
+```bash
+# 打包前端到 backend/public
+cd frontend
+npm run build
+cp -r dist ../backend/public
 
-## WebSocket Protocol
+# 启动后端（自动服务前端静态文件）
+cd ../backend
+npm run dev
+```
 
-| Direction | Message | Format |
-|-----------|---------|--------|
-| Client → Server | Set scenario | `{ type: "set_scenario", scenario: "interview" }` |
-| Client → Server | Audio data | Binary (webm/opus, 200ms chunks) |
-| Server → Client | Ready | `{ type: "ready", message: "Connected" }` |
-| Server → Client | User transcript | `{ type: "user_text", text: "..." }` |
-| Server → Client | AI reply text | `{ type: "ai_text", text: "..." }` |
-| Server → Client | Scenario set | `{ type: "scenario_set", scenario: "..." }` |
-| Server → Client | AI voice | Binary (mp3) |
+### 6. 公网访问（临时）
+
+```bash
+npx cloudflared tunnel --url http://localhost:3000
+```
+
+会生成一个 `https://xxx.trycloudflare.com` 公网地址。
+
+=
+## 环境变量
+
+```
+# .env
+MIMO_API_KEY=你的小米MiMo API Key
+```
 
 ## License
 
