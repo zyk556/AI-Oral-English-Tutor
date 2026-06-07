@@ -182,11 +182,9 @@ export default function App() {
       {/* ===== 三栏主体 ===== */}
       <div className="flex-1 flex max-w-[1600px] mx-auto w-full min-h-0">
         {/* 左侧场景栏 */}
-        <aside className="w-[290px] flex-shrink-0 py-4 pl-4 flex flex-col gap-3 overflow-y-auto hidden md:flex">
-          <ScenarioSelector onSelect={setScenario} currentScenario={scenario} currentContext={scenarioContext} />
-          <div className="mt-auto">
-            <DictionaryCard />
-          </div>
+        <aside className="w-[350px] flex-shrink-0 py-4 pl-2 flex flex-col gap-2 overflow-y-auto hidden md:flex">
+          <ScenarioSelector onSelect={setScenario} currentScenario={scenario} />
+          <DictionaryCard />
         </aside>
 
         {/* 中央聊天区 */}
