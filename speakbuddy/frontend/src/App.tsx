@@ -6,6 +6,7 @@ import ScenarioSelector from "./components/ScenarioSelector";
 import ChatBubble from "./components/ChatBubble";
 import VoiceSettings from "./components/VoiceSettings";
 import EvaluationPanel from "./components/EvaluationPanel";
+import DictionaryCard from "./components/DictionaryCard";
 import { FaHeadphones, FaComment, FaMicrophone, FaSpinner, FaRedo } from "react-icons/fa";
 
 export default function App() {
@@ -181,7 +182,12 @@ export default function App() {
       {/* ===== 三栏主体 ===== */}
       <div className="flex-1 flex max-w-[1600px] mx-auto w-full min-h-0">
         {/* 左侧场景栏 */}
-        <ScenarioSelector onSelect={setScenario} currentScenario={scenario} currentContext={scenarioContext} />
+        <aside className="w-[290px] flex-shrink-0 py-4 pl-4 flex flex-col gap-3 overflow-y-auto hidden md:flex">
+          <ScenarioSelector onSelect={setScenario} currentScenario={scenario} currentContext={scenarioContext} />
+          <div className="mt-auto">
+            <DictionaryCard />
+          </div>
+        </aside>
 
         {/* 中央聊天区 */}
         <main className="flex-1 flex flex-col min-w-0 px-4 py-4">

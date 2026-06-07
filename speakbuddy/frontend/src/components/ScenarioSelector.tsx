@@ -21,7 +21,7 @@ export default function ScenarioSelector({
   currentContext,
 }: ScenarioSelectorProps) {
   return (
-    <aside className="w-[290px] flex-shrink-0 py-4 pl-4 space-y-2.5 overflow-y-auto hidden md:block">
+    <div className="space-y-2.5">
       <div
         className="text-xs font-semibold px-2 mb-2"
         style={{ color: "var(--color-text-secondary)" }}
@@ -71,6 +71,6 @@ export default function ScenarioSelector({
           </button>
         );
       })}
-    </aside>
+    </div>
   );
 }
