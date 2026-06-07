@@ -5,13 +5,14 @@ import { useSpeechRecognition } from "./hooks/useSpeechRecognition";
 import ScenarioSelector from "./components/ScenarioSelector";
 import ChatBubble from "./components/ChatBubble";
 import VoiceSettings from "./components/VoiceSettings";
+import EvaluationPanel from "./components/EvaluationPanel";
 import { FaHeadphones, FaComment, FaMicrophone, FaSpinner, FaGlobe, FaRedo } from "react-icons/fa";
 
 export default function App() {
   const {
     scenario, scenarioContext, refreshContext, messages, connected, playingId, pausedId,
     setPlayingId, setPausedId, listenMode, setListenMode,
-    voiceSettings, setVoiceSettings,
+    voiceSettings, setVoiceSettings, selectedEvaluation, setSelectedEvaluation,
   } = useStore();
   const { sendText, setScenario, sendVoiceSettings, previewVoice } = useWebSocket();
   const { startListening, stopListening, isListening } = useSpeechRecognition();
@@ -271,16 +272,25 @@ export default function App() {
         </main>
 
         {/* 右侧辅助区 */}
-        <aside className="w-[360px] flex-shrink-0 py-4 pr-4 space-y-4 overflow-y-auto hidden lg:block">
-          {/* 语音设置面板 */}
-          <VoiceSettings
-            voice={voiceSettings.voice}
-            speed={voiceSettings.speed}
-            volume={voiceSettings.volume}
-            onChange={(s) => { setVoiceSettings(s); sendVoiceSettings(s); }}
-            onPreview={previewVoice}
-          />
+        <aside className="w-[360px] flex-shrink-0 py-4 pr-4 flex flex-col gap-4 overflow-y-auto hidden lg:flex">
+          {/* 评分详情面板（点击消息气泡的评分触发） */}
+          {selectedEvaluation && (
+            <EvaluationPanel
+              evaluation={selectedEvaluation}
+              onClose={() => setSelectedEvaluation(null)}
+            />
+          )}
 
+          {/* 底部语音设置 */}
+          <div className="mt-auto">
+            <VoiceSettings
+              voice={voiceSettings.voice}
+              speed={voiceSettings.speed}
+              volume={voiceSettings.volume}
+              onChange={(s) => { setVoiceSettings(s); sendVoiceSettings(s); }}
+              onPreview={previewVoice}
+            />
+          </div>
         </aside>
       </div>
     </div>
