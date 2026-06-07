@@ -31,53 +31,6 @@ interface VoiceSettings {
   volume: number;
 }
 
-// 双角色 System Prompt：对话伙伴 + 纠错评委
-function buildSystemPrompt(scenario: string): string {
-  const scenarioPrompts: Record<string, string> = {
-    interview:
-      "You are an experienced HR interviewer at a tech company. You are interviewing a candidate for a software engineer position. Ask behavioral and technical questions naturally. React to the candidate's responses with follow-up questions. Keep the tone professional but friendly. Limit each response to 2-3 sentences.",
-    ordering:
-      "You are a friendly waiter at a nice restaurant. Take the customer's order, suggest dishes based on their preferences, and handle any special requests. Use casual, polite English. Keep responses short and natural.",
-    meeting:
-      "You are a project manager leading a daily standup meeting. Ask each team member about their progress, any blockers, and plans for the day. Be encouraging and efficient. Keep the tone professional but supportive.",
-  };
-
-  const scenarioPrompt = scenarioPrompts[scenario] || scenarioPrompts["interview"];
-
-  return `${scenarioPrompt}
-
-You have TWO roles:
-1. **Conversation Partner**: Respond naturally to keep the conversation going.
-2. **English Evaluator** (invisible to user): Silently evaluate the user's English. Do NOT mention corrections in your reply.
-
-You MUST respond with ONLY a valid JSON object (no markdown, no code fences) in this exact format:
-{
-  "reply": "Your conversational response here (2-3 sentences)",
-  "translation": "简体中文翻译，翻译你的 reply 内容，自然口语化",
-  "evaluation": {
-    "corrected": "A grammatically corrected version of the user's full message",
-    "grammar": [
-      {"original": "the wrong phrase", "corrected": "the correct phrase", "explanation": "Brief explanation of the grammar rule"}
-    ],
-    "vocabulary": [
-      {"suggestion": "better word or phrase", "context": "Why this is better, with example usage"}
-    ],
-    "score": {"fluency": 7, "grammar": 6, "vocabulary": 7, "overall": 7},
-    "comment": "One encouraging sentence with specific advice"
-  }
-}
-
-Rules:
-- "reply" must be ONLY your conversational response, as if you are just a conversation partner. Do NOT include any evaluation or correction in reply.
-- "corrected": You MUST rewrite the user's message with ALL grammar, tense, spelling, and word order errors fixed. This is NOT a copy of the user's message — it is the CORRECTED version. If the user said "I have work on many project last year", corrected must be "I worked on many projects last year". If the user's English is already perfect, just repeat their message as-is.
-- "grammar" array: List EVERY grammar error you found. For each error, show the exact wrong phrase from the user's message and the correct replacement. If there are no errors, use empty array [].
-- "vocabulary" array: suggest 1-2 better word choices. If the user's vocabulary is perfect, use empty array [].
-- "score": each dimension is 1-10. Be honest but encouraging.
-- "comment": be specific and helpful, not generic.
-- If the user's English is perfect, the evaluation should still have scores (high) and a positive comment.
-- IMPORTANT: Output ONLY the JSON object. No extra text before or after.`;
-}
-
 // 会话状态
 interface SessionState {
   scenario: string | null;
@@ -196,13 +149,103 @@ app.get(
   })
 );
 
-// 双角色 LLM：对话回复 + 评估
+// 双角色 LLM：并行调用对话 + 评估
 async function generateReplyAndEvaluation(
   scenario: string,
   history: Array<{ role: "user" | "assistant"; content: string }>
 ): Promise<{ reply: string; translation: string; evaluation: Evaluation }> {
-  const systemPrompt = buildSystemPrompt(scenario);
+  const scenarioPrompts: Record<string, string> = {
+    interview:
+      "You are an experienced HR interviewer at a tech company. Ask behavioral and technical questions naturally. Keep the tone professional but friendly. Limit each response to 2-3 sentences.",
+    ordering:
+      "You are a friendly waiter at a nice restaurant. Take the customer's order, suggest dishes. Use casual, polite English. Keep responses short and natural.",
+    meeting:
+      "You are a project manager leading a daily standup meeting. Ask about progress, blockers, and plans. Be encouraging and efficient. Keep responses short.",
+  };
+  const scenarioPrompt = scenarioPrompts[scenario] || scenarioPrompts["interview"];
 
+  const userMsg = history[history.length - 1]?.content || "";
+
+  // 并行：一个生成对话，一个生成评估
+  const [replyResult, evalResult] = await Promise.allSettled([
+    // 调用 1：对话回复（纯文本）
+    callLLM([
+      { role: "system", content: scenarioPrompt },
+      ...history,
+    ], 300),
+
+    // 调用 2：评估用户英语（JSON）
+    callLLM([
+      {
+        role: "system",
+        content: `You are an English teacher. Evaluate the user's English. Reply with ONLY a JSON object, no extra text:
+{"corrected":"corrected version of user's message","grammar":[{"original":"error","corrected":"fix","explanation":"why"}],"vocabulary":[{"suggestion":"better word","context":"why"}],"score":{"fluency":7,"grammar":7,"vocabulary":7,"overall":7},"comment":"one helpful sentence"}`,
+      },
+      { role: "user", content: `Evaluate this English: "${userMsg}"` },
+    ], 500),
+  ]);
+
+  // 处理对话回复
+  let reply = "I didn't catch that, could you repeat?";
+  if (replyResult.status === "fulfilled") {
+    reply = replyResult.value || reply;
+  } else {
+    console.error("[LLM] Reply call failed:", replyResult.reason);
+  }
+
+  // 处理评估
+  let evaluation: Evaluation = {
+    corrected: "", grammar: [], vocabulary: [],
+    score: { fluency: 7, grammar: 7, vocabulary: 7, overall: 7 },
+    comment: "",
+  };
+
+  if (evalResult.status === "fulfilled") {
+    try {
+      let jsonStr = evalResult.value.trim();
+      jsonStr = jsonStr.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "");
+      jsonStr = jsonStr.replace(/^[^{]*/, "");
+      const first = jsonStr.indexOf("{");
+      const last = jsonStr.lastIndexOf("}");
+      if (first !== -1 && last > first) jsonStr = jsonStr.substring(first, last + 1);
+      jsonStr = jsonStr.replace(/,\s*([}\]])/g, "$1");
+      jsonStr = jsonStr.replace(/'/g, '"');
+
+      console.log("[Eval] JSON:", jsonStr.substring(0, 300));
+      const parsed = JSON.parse(jsonStr);
+      evaluation = {
+        corrected: parsed.corrected || "",
+        grammar: parsed.grammar || [],
+        vocabulary: parsed.vocabulary || [],
+        score: parsed.score || evaluation.score,
+        comment: parsed.comment || "",
+      };
+    } catch (err) {
+      console.error("[Eval] Parse failed:", evalResult.value?.substring(0, 300));
+    }
+  } else {
+    console.error("[Eval] Call failed:", evalResult.reason);
+  }
+
+  // 翻译（从对话回复生成）
+  let translation = "";
+  try {
+    translation = await callLLM([
+      { role: "system", content: "Translate the following English text to natural spoken Chinese. Reply with ONLY the translation, nothing else." },
+      { role: "user", content: reply },
+    ], 200);
+  } catch (err) {
+    console.error("[Translation] Failed:", err);
+  }
+
+  return { reply, translation, evaluation };
+}
+
+// 通用 LLM 调用
+async function callLLM(
+  messages: Array<{ role: string; content: string }>,
+  maxTokens: number
+): Promise<string> {
   const resp = await fetch(`${MIMO_BASE_URL}/chat/completions`, {
     method: "POST",
     headers: {
@@ -211,8 +254,8 @@ async function generateReplyAndEvaluation(
     },
     body: JSON.stringify({
       model: MIMO_LLM_MODEL,
-      messages: [{ role: "system", content: systemPrompt }, ...history],
-      max_tokens: 1200,
+      messages,
+      max_tokens: maxTokens,
       temperature: 0.7,
     }),
   });
@@ -223,51 +266,7 @@ async function generateReplyAndEvaluation(
   }
 
   const data = await resp.json();
-  const content = data.choices?.[0]?.message?.content || "";
-
-  // 解析 JSON 响应
-  try {
-    let jsonStr = content.trim();
-    // 去掉 markdown 代码块包裹
-    jsonStr = jsonStr.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "");
-    // 提取第一个 { 到最后一个 } 之间的内容
-    const firstBrace = jsonStr.indexOf("{");
-    const lastBrace = jsonStr.lastIndexOf("}");
-    if (firstBrace !== -1 && lastBrace !== -1) {
-      jsonStr = jsonStr.substring(firstBrace, lastBrace + 1);
-    }
-    // 修复常见 JSON 问题：尾部逗号
-    jsonStr = jsonStr.replace(/,\s*([}\]])/g, "$1");
-
-    console.log("[LLM] Parsing JSON:", (jsonStr || "").substring(0, 200) + "...");
-    const parsed = JSON.parse(jsonStr);
-
-    const reply = parsed.reply || "I didn't catch that, could you repeat?";
-    const translation = parsed.translation || "";
-    const evaluation: Evaluation = {
-      corrected: parsed.evaluation?.corrected || "",
-      grammar: parsed.evaluation?.grammar || [],
-      vocabulary: parsed.evaluation?.vocabulary || [],
-      score: parsed.evaluation?.score || { fluency: 5, grammar: 5, vocabulary: 5, overall: 5 },
-      comment: parsed.evaluation?.comment || "",
-    };
-
-    return { reply, translation, evaluation };
-  } catch (parseErr) {
-    console.error("[LLM] Failed to parse JSON response:", content);
-    // 降级：把整个内容当作 reply，评估为空
-    return {
-      reply: content || "I didn't catch that, could you repeat?",
-      translation: "",
-      evaluation: {
-        corrected: "",
-        grammar: [],
-        vocabulary: [],
-        score: { fluency: 0, grammar: 0, vocabulary: 0, overall: 0 },
-        comment: "Could not evaluate this response.",
-      },
-    };
-  }
+  return data.choices?.[0]?.message?.content || "";
 }
 
 // TTS 语音合成
